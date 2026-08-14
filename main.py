@@ -8,7 +8,7 @@ from fastapi.responses import HTMLResponse
 
 from pydantic import BaseModel
 
-from config import day_id, month_id, day_len, month_len, DATA_FILE
+from config import day_id, month_id, day_len, month_len, DATA_FILE, LUOGU_ID, QOJ_ID, CF_ID, HDU_ID, ATCODER_ID
 
 
 class Record(BaseModel):
@@ -31,7 +31,7 @@ def load_count_cache():
 
     passed: set[str] = set()
     for i in range(day_len):
-        day_count_cache[i] = 0
+        day_count_cache[i] = 0 
     for i in range(month_len):
         month_count_cache[i] = 0
     for rec in records_cache:
@@ -79,6 +79,31 @@ def index():
     return open(path.join("page", "index.html"), encoding="utf-8").read()
 
 
+@app.get("/api/id/luogu")
+def get_luogu_id():
+    return LUOGU_ID
+
+
+@app.get("/api/id/qoj")
+def get_qoj_id():
+    return QOJ_ID
+
+
+@app.get("/api/id/cf")
+def get_cf_id():
+    return CF_ID
+
+
+@app.get("/api/id/hdu")
+def get_hdu_id():
+    return HDU_ID
+
+
+@app.get("/api/id/atcoder")
+def get_atcoder_id():
+    return ATCODER_ID
+
+
 @app.get("/api/basic")
 def api_basic():
     return {
@@ -90,12 +115,14 @@ def api_basic():
 def push_record(record: list[Record], background_tasks: BackgroundTasks):
     global records_cache
 
+    records_len = len(records_cache)
     temp_dict = {r["rid"]: r for r in records_cache}
     for rec in record:
         temp_dict[rec.rid] = rec.model_dump()
     records_cache = sorted(temp_dict.values(), key=lambda r: r["time"])
-    background_tasks.add_task(load_count_cache)
-    background_tasks.add_task(save_to_disk_sync)
+    if records_len < len(records_cache):
+        background_tasks.add_task(load_count_cache)
+        background_tasks.add_task(save_to_disk_sync)
 
 
 @app.get("/api/day_count")

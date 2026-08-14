@@ -1,6 +1,17 @@
 from datetime import datetime
+import os
+import json
 
-LUOGU_ID = 1119066
+# 从 config.json 读取 OJ 用户 ID 配置
+_config_path = os.path.join(os.path.dirname(__file__), "config.json")
+with open(_config_path, "r", encoding="utf-8") as _f:
+    _config = json.load(_f)
+
+LUOGU_ID = _config["LUOGU_ID"]
+QOJ_ID = _config["QOJ_ID"]
+CF_ID = _config["CF_ID"]
+HDU_ID = _config["HDU_ID"]
+ATCODER_ID = _config["ATCODER_ID"]
 
 day_start = datetime(2000, 1,  1)
 
@@ -24,4 +35,4 @@ def month_id(s: str | datetime):
         return (s.year - 2000) * 12 + s.month - 1
 
 
-DATA_FILE = "records.json"
+DATA_FILE = os.path.join("data", "records.json")

@@ -738,12 +738,22 @@
                     const dayStart = new Date(today.getFullYear(), today.getMonth(), 1);
                     const dayEnd = today;
                     let dayData = await fetchDayCount(dayStart, dayEnd);
-                    const dayLabels = [];
-                    for (let i = 0; i < dayData.length; i++) {
-                        dayLabels.push(`${i + 1}日`);
-                    }
                     const dayLine = await fetchDaySum(dayStart, dayEnd);
-                    renderHighcharts('dayChartCanvas', dayLabels, dayData, dayLine, '日');
+                    const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+                    const dayLabels = [];
+                    const dayDataFull = [];
+                    const dayLineFull = [];
+                    for (let i = 0; i < daysInMonth; i++) {
+                        dayLabels.push(`${i + 1}日`);
+                        if (i < dayData.length) {
+                            dayDataFull.push(dayData[i]);
+                            dayLineFull.push(dayLine[i]);
+                        } else {
+                            dayDataFull.push(null);
+                            dayLineFull.push(null);
+                        }
+                    }
+                    renderHighcharts('dayChartCanvas', dayLabels, dayDataFull, dayLineFull, '日');
 
                 } catch (err) {
                     console.error('初始化失败:', err);
@@ -775,6 +785,7 @@
                         init();
                 }
             }
+            load_basic();
             setInterval(load_basic, 5000);
         })();
     </script>

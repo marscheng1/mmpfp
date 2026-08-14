@@ -10,3 +10,6 @@ wheels/
 .venv
 
 uv.lock
+
+data/*
+config.json
