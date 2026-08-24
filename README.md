@@ -18,15 +18,17 @@ cp config.json.sample config.json
 uv run uvicorn main:app --reload --host 127.0.0.1 --workers 1
 ```
 
-`SOLUTIONS_DIR` 用于配置题解文件的实际位置。相对路径以项目根目录为基准，也可以填写绝对路径。例如，要让 API 直接保存到本地 OI 仓库：
+`RECORDS_FILE`、`SOLUTIONS_DIR` 和 `SOLUTIONS_META_FILE` 用于配置记录数据、题解目录和题解元数据的实际位置。相对路径以项目根目录为基准，也可以填写绝对路径。例如，要让 API 直接保存题解到本地 OI 仓库：
 
 ```json
 {
-  "SOLUTIONS_DIR": "../OI/article/solutions"
+  "RECORDS_FILE": "data/records.json",
+  "SOLUTIONS_DIR": "../OI/article/solutions",
+  "SOLUTIONS_META_FILE": "data/solutions-meta.json"
 }
 ```
 
-这样，mmpfp 中的 `data/solutions/<path>.md` 仍是默认目录约定，但 API 实际会读写 OI 仓库中的 `article/solutions/<path>.md`。题解文件由 OI 仓库管理，不会进入 mmpfp 的提交；请确保 `data/solutions/.gitignore` 继续忽略本地默认目录，并在 OI 仓库中提交 API 产生的修改。
+这样，mmpfp 中的 `data/solutions/<path>.md` 仍是默认目录约定，但 API 实际会读写 OI 仓库中的 `article/solutions/<path>.md`。题解文件由 OI 仓库管理，不会进入 mmpfp 的提交；请确保 `data/solutions/.gitignore` 继续忽略本地默认目录，并在 OI 仓库中提交 API 产生的修改。未配置这些字段时，会使用 `data/records.json`、`data/solutions` 和 `data/solutions-meta.json`。
 
 ## MCP 知识库服务
 

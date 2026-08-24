@@ -4,5 +4,7 @@
   "CF_ID": "",
   "HDU_ID": "",
   "ATCODER_ID": "",
-  "SOLUTIONS_DIR": "../OI/article/solutions"
+  "RECORDS_FILE": "data/records.json",
+  "SOLUTIONS_DIR": "../OI/article/solutions",
+  "SOLUTIONS_META_FILE": "data/solutions-meta.json"
 }
