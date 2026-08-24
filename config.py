@@ -2,8 +2,10 @@ from datetime import datetime
 import os
 import json
 
+PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
+
 # 从 config.json 读取 OJ 用户 ID 配置
-_config_path = os.path.join(os.path.dirname(__file__), "config.json")
+_config_path = os.path.join(PROJECT_ROOT, "config.json")
 with open(_config_path, "r", encoding="utf-8") as _f:
     _config = json.load(_f)
 
@@ -35,4 +37,9 @@ def month_id(s: str | datetime):
         return (s.year - 2000) * 12 + s.month - 1
 
 
-DATA_FILE = os.path.join("data", "records.json")
+DATA_DIR = os.path.join(PROJECT_ROOT, "data")
+DATA_FILE = os.path.join(DATA_DIR, "records.json")
+SOLUTIONS_DIR = os.path.join(DATA_DIR, "solutions")
+META_FILE = os.path.join(DATA_DIR, "solutions-meta.json")
+PROMPT_FILE = os.path.join(DATA_DIR, "prompt", "every_problem.md")
+PAGE_DIR = os.path.join(PROJECT_ROOT, "page")

@@ -1,0 +1,1394 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>解题日志 - MMPFP</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/codemirror.min.css" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background: #f6f8fa;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* ---------- 顶部导航 ---------- */
+        .header {
+            display: flex;
+            align-items: center;
+            padding: 10px 20px;
+            background: #ffffff;
+            border-bottom: 1px solid #d0d7de;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+            flex-shrink: 0;
+            z-index: 10;
+        }
+
+        .header h1 {
+            font-size: 18px;
+            font-weight: 600;
+            color: #24292f;
+            margin-right: 20px;
+        }
+
+        .header .back-link {
+            color: #0969da;
+            text-decoration: none;
+            font-size: 14px;
+        }
+
+        .header .back-link:hover {
+            text-decoration: underline;
+        }
+
+        /* ---------- 主容器 ---------- */
+        .main-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* ---------- 左侧文件管理器 ---------- */
+        .file-manager {
+            width: 260px;
+            min-width: 260px;
+            background: #ffffff;
+            border-right: 1px solid #d0d7de;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .file-manager-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 14px;
+            border-bottom: 1px solid #e8eaed;
+            flex-shrink: 0;
+        }
+
+        .file-manager-header span {
+            font-size: 13px;
+            font-weight: 600;
+            color: #24292f;
+        }
+
+        .file-manager-header .actions {
+            display: flex;
+            gap: 4px;
+        }
+
+        .file-manager-header .actions button {
+            background: none;
+            border: 1px solid #d0d7de;
+            border-radius: 6px;
+            padding: 4px 8px;
+            font-size: 12px;
+            color: #24292f;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+        .file-manager-header .actions button:hover {
+            background: #f3f4f6;
+        }
+
+        .file-tree {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px 0;
+        }
+
+        .file-tree .tree-item {
+            display: flex;
+            align-items: center;
+            padding: 6px 14px;
+            font-size: 13px;
+            cursor: pointer;
+            color: #24292f;
+            transition: background 0.1s;
+            user-select: none;
+        }
+
+        .file-tree .tree-item:hover {
+            background: #f3f4f6;
+        }
+
+        .file-tree .tree-item.active {
+            background: #ddf4ff;
+            color: #0969da;
+            font-weight: 500;
+        }
+
+        .file-tree .tree-item .icon {
+            margin-right: 6px;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        .file-tree .tree-item .name {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .file-tree .tree-item.dir-item {
+            font-weight: 500;
+        }
+
+        .file-tree .tree-item.dir-item .toggle {
+            margin-right: 4px;
+            font-size: 10px;
+            width: 12px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        .file-tree .tree-item.file-item {
+            padding-left: 10px;
+        }
+
+        /* ---------- 子容器缩进和缩进线 ---------- */
+        .file-tree .child-container {
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .file-tree .child-container::before {
+            content: '';
+            position: absolute;
+            left: 8px;
+            top: 0;
+            bottom: 0;
+            width: 1px;
+            background: #d0d7de;
+        }
+
+        .file-tree .tree-item .tree-connector {
+            display: inline-block;
+            width: 12px;
+            height: 1px;
+            background: #d0d7de;
+            margin-right: 4px;
+            flex-shrink: 0;
+        }
+
+        .file-tree .tree-item.dir-item .toggle {
+            margin-left: 0;
+        }
+
+        /* ---------- 删除按钮 ---------- */
+        .file-tree .tree-item .delete-btn {
+            display: none;
+            margin-left: auto;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 12px;
+            padding: 0 4px;
+            color: #656d76;
+            border-radius: 3px;
+            flex-shrink: 0;
+            line-height: 1;
+        }
+
+        .file-tree .tree-item .delete-btn:hover {
+            color: #cf222e;
+            background: #f3f4f6;
+        }
+
+        .file-tree .tree-item:hover .delete-btn {
+            display: inline-block;
+        }
+
+        /* ---------- 中间编辑器区域 ---------- */
+        .editor-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            background: #f6f8fa;
+        }
+
+        .editor-toolbar {
+            display: flex;
+            align-items: center;
+            padding: 8px 16px;
+            background: #ffffff;
+            border-bottom: 1px solid #d0d7de;
+            flex-shrink: 0;
+        }
+
+        .editor-toolbar .file-label {
+            font-size: 13px;
+            font-weight: 500;
+            color: #24292f;
+        }
+
+        /* ---------- 右侧状态面板 ---------- */
+        .status-panel {
+            width: 200px;
+            min-width: 200px;
+            background: #ffffff;
+            border-left: 1px solid #d0d7de;
+            display: flex;
+            flex-direction: column;
+            padding: 16px;
+            gap: 16px;
+            flex-shrink: 0;
+        }
+
+        .status-panel .status-section {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .status-panel .status-section .label {
+            font-size: 11px;
+            font-weight: 600;
+            color: #656d76;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .status-panel .status-section .value {
+            font-size: 14px;
+            color: #24292f;
+        }
+
+        .status-panel .status-section .value.timer {
+            font-size: 28px;
+            font-weight: 700;
+            color: #24292f;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .status-panel .status-section .value.save-status.saved {
+            color: #1a7f37;
+        }
+
+        .status-panel .status-section .value.save-status.error {
+            color: #cf222e;
+        }
+
+        .status-panel .complete-btn {
+            width: 100%;
+            background: none;
+            border: 1px solid #d0d7de;
+            border-radius: 6px;
+            padding: 8px 10px;
+            font-size: 13px;
+            color: #24292f;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+        .status-panel .complete-btn:hover {
+            background: #f3f4f6;
+        }
+
+        .status-panel .complete-btn.done {
+            background: #1a7f37;
+            color: #ffffff;
+            border-color: #1a7f37;
+        }
+
+        .status-panel .complete-btn.done:hover {
+            background: #146b2e;
+        }
+
+        .status-panel .empty-hint {
+            font-size: 13px;
+            color: #656d76;
+            text-align: center;
+            margin-top: 40px;
+        }
+
+        /* 已完成文件：编辑区隐藏，预览区占满 */
+        #md-editor.completed #code-editor-wrapper {
+            display: none;
+        }
+
+        #md-editor.completed #preview-area {
+            flex: 1;
+            border-bottom: none;
+        }
+
+        /* ---------- 空状态 ---------- */
+        .empty-state {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #656d76;
+            font-size: 14px;
+            gap: 8px;
+        }
+
+        .empty-state .big-icon {
+            font-size: 48px;
+            opacity: 0.4;
+        }
+
+        /* ---------- Editor.md 覆盖 ---------- */
+        #md-editor {
+            flex: 1;
+            display: none;
+            flex-direction: column;
+            min-height: 0;
+        }
+
+        #md-editor.active {
+            display: flex;
+        }
+
+        /* 预览区（上半部分） */
+        #preview-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px 24px;
+            background: #ffffff;
+            border-bottom: 1px solid #d0d7de;
+            line-height: 1.7;
+            font-size: 14px;
+            color: #24292f;
+        }
+
+        #preview-area h1,
+        #preview-area h2,
+        #preview-area h3 {
+            margin-top: 1.2em;
+            margin-bottom: 0.6em;
+        }
+
+        #preview-area p {
+            margin-bottom: 1em;
+        }
+
+        #preview-area code {
+            background: #f3f4f6;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+
+        #preview-area pre code {
+            background: transparent;
+            padding: 0;
+        }
+
+        #preview-area pre {
+            background: #f6f8fa;
+            border: 1px solid #d0d7de;
+            border-radius: 6px;
+            padding: 16px;
+            overflow-x: auto;
+        }
+
+        #preview-area img {
+            max-width: 100%;
+        }
+
+        #preview-area table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 1em 0;
+        }
+
+        #preview-area th,
+        #preview-area td {
+            border: 1px solid #d0d7de;
+            padding: 8px 12px;
+            text-align: left;
+        }
+
+        #preview-area th {
+            background: #f6f8fa;
+        }
+
+        #preview-area blockquote {
+            border-left: 4px solid #0969da;
+            padding-left: 16px;
+            margin: 1em 0;
+            color: #656d76;
+        }
+
+        #preview-area ul,
+        #preview-area ol {
+            padding-left: 24px;
+            margin: 1em 0;
+        }
+
+        #preview-area .katex-display {
+            margin: 1em 0;
+            overflow-x: auto;
+            overflow-y: hidden;
+        }
+
+        #preview-area .katex {
+            font-size: 1.1em;
+        }
+
+        /* 编辑区（下半部分） */
+        #code-editor-wrapper {
+            height: 50%;
+            min-height: 200px;
+            overflow: hidden;
+            border-top: 1px solid #d0d7de;
+        }
+
+        #code-editor-wrapper .CodeMirror {
+            height: 100% !important;
+        }
+
+        /* 将 CodeMirror 的隐藏 textarea 放在编辑器内部，不移出屏幕 */
+        .CodeMirror .CodeMirror-textarea {
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            opacity: 0 !important;
+            resize: none !important;
+            overflow: hidden !important;
+            z-index: 0 !important;
+        }
+
+        /* ---------- 对话框遮罩 ---------- */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.4);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal-box {
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 24px;
+            width: 400px;
+            max-width: 90vw;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        }
+
+        .modal-box h3 {
+            font-size: 16px;
+            margin-bottom: 16px;
+            color: #24292f;
+        }
+
+        .modal-box input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #d0d7de;
+            border-radius: 6px;
+            font-size: 14px;
+            margin-bottom: 16px;
+            outline: none;
+        }
+
+        .modal-box input:focus {
+            border-color: #0969da;
+            box-shadow: 0 0 0 3px rgba(9, 105, 218, 0.15);
+        }
+
+        .modal-box .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+        }
+
+        .modal-box .modal-actions button {
+            padding: 6px 16px;
+            border-radius: 6px;
+            font-size: 13px;
+            cursor: pointer;
+            border: 1px solid #d0d7de;
+            background: #ffffff;
+            color: #24292f;
+        }
+
+        .modal-box .modal-actions button.primary {
+            background: #0969da;
+            color: #ffffff;
+            border-color: #0969da;
+        }
+
+        .modal-box .modal-actions button.primary:hover {
+            background: #0860ca;
+        }
+
+        .modal-box .modal-actions button:hover {
+            background: #f3f4f6;
+        }
+
+        /* ---------- Prompt 按钮 ---------- */
+        .prompt-btn {
+            width: 100%;
+            padding: 10px 16px;
+            border: 1px solid #d0d7de;
+            border-radius: 8px;
+            background: #ffffff;
+            color: #24292f;
+            font-size: 14px;
+            cursor: pointer;
+            margin-top: 8px;
+            transition: all 0.15s;
+        }
+
+        .prompt-btn:hover {
+            background: #f3f4f6;
+            border-color: #0969da;
+            color: #0969da;
+        }
+
+        .prompt-btn.copied {
+            background: #dafbe1;
+            border-color: #1a7f37;
+            color: #1a7f37;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- 顶部导航 -->
+    <div class="header">
+        <a class="back-link" href="/">&larr; 返回主页</a>
+        <h1>解题日志</h1>
+    </div>
+
+    <!-- 主容器 -->
+    <div class="main-container">
+
+        <!-- 左侧文件管理器 -->
+        <div class="file-manager">
+            <div class="file-manager-header">
+                <span>文件</span>
+                <div class="actions">
+                    <button id="btn-new-folder" title="新建文件夹">+ 文件夹</button>
+                    <button id="btn-new-file" title="新建 Markdown 文件">+ 文件</button>
+                </div>
+            </div>
+            <div class="file-tree" id="file-tree">
+                <!-- 由 JS 动态渲染 -->
+            </div>
+        </div>
+
+        <!-- 中间编辑器区域 -->
+        <div class="editor-area">
+            <div class="editor-toolbar">
+                <span class="file-label" id="file-label">选择或创建一个文件</span>
+            </div>
+            <div class="empty-state" id="empty-state">
+                <div class="big-icon">📝</div>
+                <span>从左侧选择文件，或新建一个文件</span>
+            </div>
+            <div id="md-editor">
+                <div id="preview-area"></div>
+                <div id="code-editor-wrapper">
+                    <textarea id="code-editor"></textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- 右侧状态面板 -->
+        <div class="status-panel" id="status-panel">
+            <div class="empty-hint" id="panel-empty-hint">选择文件后显示状态</div>
+
+            <div class="status-section" id="panel-timer-section" style="display:none;">
+                <span class="label">计时</span>
+                <span class="value timer" id="timer">00:00</span>
+            </div>
+
+            <div class="status-section" id="panel-status-section" style="display:none;">
+                <span class="label">文件状态</span>
+                <span class="value save-status" id="save-status">-</span>
+            </div>
+
+            <button class="complete-btn" id="complete-btn" style="display:none;">完成</button>
+
+            <button class="prompt-btn" id="prompt-btn" style="display:none;">生成 Prompt</button>
+        </div>
+    </div>
+
+    <!-- 新建文件夹对话框 -->
+    <div class="modal-overlay" id="modal-folder">
+        <div class="modal-box">
+            <h3>新建文件夹</h3>
+            <input type="text" id="input-folder-name" placeholder="文件夹名称" />
+            <div class="modal-actions">
+                <button id="btn-cancel-folder">取消</button>
+                <button class="primary" id="btn-confirm-folder">创建</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 新建文件对话框 -->
+    <div class="modal-overlay" id="modal-file">
+        <div class="modal-box">
+            <h3>新建 Markdown 文件</h3>
+            <input type="text" id="input-file-name" placeholder="文件名（无需 .md）" />
+            <div class="modal-actions">
+                <button id="btn-cancel-file">取消</button>
+                <button class="primary" id="btn-confirm-file">创建</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/mode/markdown/markdown.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
+
+    <script>
+        (function () {
+            'use strict';
+
+            // ---------- DOM 引用 ----------
+            const fileTree = document.getElementById('file-tree');
+            const fileLabel = document.getElementById('file-label');
+            const saveStatus = document.getElementById('save-status');
+            const emptyState = document.getElementById('empty-state');
+            const mdEditor = document.getElementById('md-editor');
+            const timerEl = document.getElementById('timer');
+            const completeBtn = document.getElementById('complete-btn');
+            const panelTimerSection = document.getElementById('panel-timer-section');
+            const panelStatusSection = document.getElementById('panel-status-section');
+            const panelEmptyHint = document.getElementById('panel-empty-hint');
+            const btnNewFolder = document.getElementById('btn-new-folder');
+            const btnNewFile = document.getElementById('btn-new-file');
+            const promptBtn = document.getElementById('prompt-btn');
+
+            // 对话框
+            const modalFolder = document.getElementById('modal-folder');
+            const modalFile = document.getElementById('modal-file');
+            const inputFolderName = document.getElementById('input-folder-name');
+            const inputFileName = document.getElementById('input-file-name');
+            const btnCancelFolder = document.getElementById('btn-cancel-folder');
+            const btnConfirmFolder = document.getElementById('btn-confirm-folder');
+            const btnCancelFile = document.getElementById('btn-cancel-file');
+            const btnConfirmFile = document.getElementById('btn-confirm-file');
+
+            // ---------- 状态 ----------
+            let cmEditor = null;
+            let currentFilePath = null;
+            let currentFolder = null; // 当前选中的文件夹路径
+            let saveTimer = null;
+            let dirty = false;
+            let treeData = [];
+            let metaData = {}; // {filePath: {elapsed: number, completed: bool}}
+            let timerInterval = null;
+            let timerTick = 0; // 当前打开文件的计时器秒数（前端累计）
+            let timerStartedAt = 0;
+            let isCompleted = false; // 当前文件是否已完成
+            let committedContent = ''; // 当前文件已固定的内容（最后一段之前的部分）
+            let suppressEditorChange = false;
+            let commitInProgress = false;
+            let fileWriteQueue = Promise.resolve();
+
+            // ---------- API 辅助 ----------
+            async function apiGet(url) {
+                const resp = await fetch(url);
+                if (!resp.ok) {
+                    const err = await resp.text();
+                    throw new Error(`HTTP ${resp.status}: ${err}`);
+                }
+                return resp.json();
+            }
+
+            async function apiPost(url, data) {
+                const resp = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data),
+                });
+                if (!resp.ok) {
+                    const err = await resp.text();
+                    throw new Error(`HTTP ${resp.status}: ${err}`);
+                }
+                return resp.json();
+            }
+
+            // ---------- 计时器 ----------
+            async function loadMeta() {
+                try {
+                    metaData = await apiGet('/api/solutions/meta');
+                } catch (e) {
+                    metaData = {};
+                }
+            }
+
+            async function saveMeta() {
+                try {
+                    await apiPost('/api/solutions/meta/batch', { items: metaData });
+                } catch (e) {
+                    // 静默失败
+                }
+            }
+
+            function formatTime(seconds) {
+                const m = Math.floor(seconds / 60);
+                const s = Math.floor(seconds % 60);
+                return String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+            }
+
+            function startTimer() {
+                stopTimer();
+                timerStartedAt = Date.now();
+                timerInterval = setInterval(() => {
+                    syncTimer();
+                }, 1000);
+            }
+
+            function syncTimer() {
+                if (!timerStartedAt) return;
+                timerTick += Math.floor((Date.now() - timerStartedAt) / 1000);
+                timerStartedAt = Date.now();
+                timerEl.textContent = formatTime(timerTick);
+            }
+
+            function stopTimer() {
+                if (timerInterval) {
+                    syncTimer();
+                    clearInterval(timerInterval);
+                    timerInterval = null;
+                }
+                timerStartedAt = 0;
+            }
+
+            function saveTimerState() {
+                if (!currentFilePath || isCompleted) return Promise.resolve();
+                syncTimer();
+                const key = normalizeMetaPath(currentFilePath);
+                metaData[key] = { elapsed: timerTick, completed: false };
+                return saveMeta();
+            }
+
+            function enqueueFileWrite(operation) {
+                const write = fileWriteQueue.then(operation, operation);
+                fileWriteQueue = write.catch(() => undefined);
+                return write;
+            }
+
+            // 定期保存计时器状态（每30秒）
+            setInterval(() => {
+                saveTimerState();
+            }, 30000);
+
+            document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'visible') syncTimer();
+                saveTimerState();
+            });
+            window.addEventListener('pagehide', () => {
+                saveTimerState();
+            });
+
+            function normalizeMetaPath(fp) {
+                return fp.replace(/\.md$/i, '');
+            }
+
+            // ---------- 文件树 ----------
+            async function loadTree() {
+                try {
+                    treeData = await apiGet('/api/solutions/list');
+                    renderTree();
+                } catch (e) {
+                    fileTree.innerHTML = `<div class="tree-item" style="color:#cf222e;">加载失败: ${e.message}</div>`;
+                }
+            }
+
+            function renderTree() {
+                fileTree.innerHTML = '';
+                if (treeData.length === 0) {
+                    fileTree.innerHTML = '<div class="tree-item" style="color:#656d76;cursor:default;">暂无文件</div>';
+                    return;
+                }
+
+                for (const item of treeData) {
+                    if (item.type === 'dir') {
+                        fileTree.appendChild(renderDir(item));
+                    } else {
+                        fileTree.appendChild(renderFile(item.name));
+                    }
+                }
+            }
+
+            function renderDir(dir) {
+                const container = document.createElement('div');
+
+                const dirItem = document.createElement('div');
+                dirItem.className = 'tree-item dir-item';
+                const connector = document.createElement('span');
+                connector.className = 'tree-connector';
+                dirItem.appendChild(connector);
+                const toggle = document.createElement('span');
+                toggle.className = 'toggle';
+                toggle.textContent = '▼';
+                dirItem.appendChild(toggle);
+                const icon = document.createElement('span');
+                icon.className = 'icon';
+                icon.textContent = '📁';
+                dirItem.appendChild(icon);
+                const name = document.createElement('span');
+                name.className = 'name';
+                name.textContent = dir.name;
+                dirItem.appendChild(name);
+
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'delete-btn';
+                deleteBtn.textContent = '🗑️';
+                deleteBtn.title = '删除文件夹';
+                deleteBtn.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    if (!confirm(`确定删除文件夹 "${dir.name}" 及其所有内容？`)) return;
+                    try {
+                        await apiPost('/api/solutions/delete', { path: dir._fullPath || dir.name });
+                        // 删除对应文件夹下所有文件的 meta 数据
+                        const dirPath = dir._fullPath || dir.name;
+                        for (const key of Object.keys(metaData)) {
+                            if (key.startsWith(dirPath + '/') || key === dirPath) {
+                                delete metaData[key];
+                            }
+                        }
+                        await saveMeta();
+                        if (currentFilePath && currentFilePath.startsWith(dir._fullPath || dir.name)) {
+                            currentFilePath = null;
+                            fileLabel.textContent = '选择或创建一个文件';
+                            emptyState.style.display = 'flex';
+                            mdEditor.classList.remove('active');
+                            // 隐藏右侧面板
+                            panelEmptyHint.style.display = 'block';
+                            panelTimerSection.style.display = 'none';
+                            panelStatusSection.style.display = 'none';
+                            completeBtn.style.display = 'none';
+                            promptBtn.style.display = 'none';
+                        }
+                        await loadTree();
+                    } catch (err) {
+                        alert('删除失败: ' + err.message);
+                    }
+                });
+                dirItem.appendChild(deleteBtn);
+
+                const childContainer = document.createElement('div');
+                childContainer.className = 'child-container';
+
+                let expanded = true;
+                dirItem.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    // 选中文件夹
+                    document.querySelectorAll('.tree-item.active').forEach(el => el.classList.remove('active'));
+                    dirItem.classList.add('active');
+                    currentFolder = dir._fullPath || dir.name;
+                    currentFilePath = null;
+                    // 展开/折叠
+                    expanded = !expanded;
+                    childContainer.style.display = expanded ? 'block' : 'none';
+                    toggle.textContent = expanded ? '▼' : '▶';
+                });
+
+                if (currentFolder === (dir._fullPath || dir.name)) {
+                    dirItem.classList.add('active');
+                }
+
+                container.appendChild(dirItem);
+                container.appendChild(childContainer);
+
+                if (dir.children) {
+                    for (const child of dir.children) {
+                        if (child.type === 'dir') {
+                            const childFullPath = (dir._fullPath || dir.name) + '/' + child.name;
+                            childContainer.appendChild(renderDir({ ...child, _fullPath: childFullPath }));
+                        } else {
+                            const filePath = (dir._fullPath || dir.name) + '/' + child.name;
+                            childContainer.appendChild(renderFile(filePath));
+                        }
+                    }
+                }
+
+                return container;
+            }
+
+            function renderFile(filePath) {
+                const item = document.createElement('div');
+                item.className = 'tree-item file-item';
+                const connector = document.createElement('span');
+                connector.className = 'tree-connector';
+                item.appendChild(connector);
+                const icon = document.createElement('span');
+                icon.className = 'icon';
+                icon.textContent = '📄';
+                item.appendChild(icon);
+                const name = document.createElement('span');
+                name.className = 'name';
+                // 只显示文件名
+                const parts = filePath.split('/');
+                name.textContent = parts[parts.length - 1];
+                item.appendChild(name);
+
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'delete-btn';
+                deleteBtn.textContent = '🗑️';
+                deleteBtn.title = '删除文件';
+                deleteBtn.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    if (!confirm(`确定删除文件 "${filePath}"？`)) return;
+                    try {
+                        await apiPost('/api/solutions/delete', { path: filePath });
+                        // 删除对应的 meta 数据
+                        delete metaData[normalizeMetaPath(filePath)];
+                        await saveMeta();
+                        if (currentFilePath === filePath) {
+                            currentFilePath = null;
+                            fileLabel.textContent = '选择或创建一个文件';
+                            emptyState.style.display = 'flex';
+                            mdEditor.classList.remove('active');
+                            // 隐藏右侧面板
+                            panelEmptyHint.style.display = 'block';
+                            panelTimerSection.style.display = 'none';
+                            panelStatusSection.style.display = 'none';
+                            completeBtn.style.display = 'none';
+                            promptBtn.style.display = 'none';
+                        }
+                        await loadTree();
+                    } catch (err) {
+                        alert('删除失败: ' + err.message);
+                    }
+                });
+                item.appendChild(deleteBtn);
+
+                item.dataset.path = filePath;
+                item.addEventListener('click', () => {
+                    document.querySelectorAll('.tree-item.active').forEach(el => el.classList.remove('active'));
+                    item.classList.add('active');
+                    currentFolder = null;
+                    openFile(filePath);
+                });
+
+                if (currentFilePath === filePath) {
+                    item.classList.add('active');
+                }
+
+                return item;
+            }
+
+            // ---------- 文件操作 ----------
+            async function openFile(filePath) {
+                if (dirty && currentFilePath) {
+                    await saveFile(currentFilePath);
+                }
+
+                // 停止旧文件的计时器，保存计时
+                stopTimer();
+                if (currentFilePath && !isCompleted) {
+                    const oldKey = normalizeMetaPath(currentFilePath);
+                    metaData[oldKey] = { elapsed: timerTick, completed: false };
+                }
+
+                currentFilePath = filePath;
+                fileLabel.textContent = filePath;
+                emptyState.style.display = 'none';
+                mdEditor.classList.add('active');
+
+                // 显示右侧面板内容
+                panelEmptyHint.style.display = 'none';
+                panelTimerSection.style.display = 'flex';
+                panelStatusSection.style.display = 'flex';
+                completeBtn.style.display = 'block';
+                promptBtn.style.display = 'block';
+
+                // 检查该文件的 meta 状态
+                const key = normalizeMetaPath(filePath);
+                const meta = metaData[key] || {};
+                isCompleted = meta.completed || false;
+                timerTick = meta.elapsed || 0;
+                committedContent = '';
+
+                // 更新 UI
+                if (isCompleted) {
+                    mdEditor.classList.add('completed');
+                    timerEl.style.display = 'none';
+                    completeBtn.textContent = '已完成 ✓';
+                    completeBtn.className = 'complete-btn done';
+                    completeBtn.style.display = 'block';
+                    stopTimer();
+                } else {
+                    mdEditor.classList.remove('completed');
+                    timerEl.style.display = 'block';
+                    timerEl.textContent = formatTime(timerTick);
+                    completeBtn.textContent = '完成';
+                    completeBtn.className = 'complete-btn';
+                    completeBtn.style.display = 'block';
+                    startTimer();
+                }
+
+                try {
+                    const data = await apiGet(`/api/solutions/read?file_path=${encodeURIComponent(filePath)}`);
+                    let fullContent = data.content || '';
+                    // 分割内容：已固定部分（前面所有内容）和最后一段
+                    // 最后一段由最后一个 \n\n 分隔
+                    const lastIdx = fullContent.lastIndexOf('\n\n');
+                    if (lastIdx !== -1) {
+                        committedContent = fullContent.slice(0, lastIdx + 2); // 包含分隔符 \n\n
+                        const lastSegment = fullContent.slice(lastIdx + 2);
+                        if (cmEditor) {
+                            cmEditor.setValue(lastSegment);
+                            cmEditor.setOption('readOnly', isCompleted);
+                            renderPreview(fullContent);
+                        } else {
+                            initEditor(lastSegment);
+                            if (isCompleted && cmEditor) {
+                                cmEditor.setOption('readOnly', true);
+                            }
+                        }
+                    } else {
+                        // 没有 \n\n 分隔，整个内容就是最后一段
+                        committedContent = '';
+                        if (cmEditor) {
+                            cmEditor.setValue(fullContent);
+                            cmEditor.setOption('readOnly', isCompleted);
+                            renderPreview(fullContent);
+                        } else {
+                            initEditor(fullContent);
+                            if (isCompleted && cmEditor) {
+                                cmEditor.setOption('readOnly', true);
+                            }
+                        }
+                    }
+                    dirty = false;
+                    saveStatus.textContent = '已保存';
+                    saveStatus.className = 'save-status saved';
+                } catch (e) {
+                    committedContent = '';
+                    if (cmEditor) {
+                        cmEditor.setValue('');
+                        cmEditor.setOption('readOnly', isCompleted);
+                    } else {
+                        initEditor('');
+                    }
+                    saveStatus.textContent = '加载失败';
+                    saveStatus.className = 'save-status error';
+                }
+            }
+
+            async function saveFile(filePath) {
+                if (!cmEditor) return;
+                const content = committedContent + cmEditor.getValue();
+                try {
+                    await enqueueFileWrite(() => apiPost('/api/solutions/save', {
+                        path: filePath,
+                        content
+                    }));
+                    dirty = false;
+                    saveStatus.textContent = '已保存';
+                    saveStatus.className = 'save-status saved';
+                } catch (e) {
+                    saveStatus.textContent = '保存失败';
+                    saveStatus.className = 'save-status error';
+                }
+            }
+
+            // ---------- 提交段 ----------
+            async function commitSegment(text) {
+                if (commitInProgress || !currentFilePath) return;
+                commitInProgress = true;
+                if (saveTimer) clearTimeout(saveTimer);
+                if (cmEditor) cmEditor.setOption('readOnly', true);
+
+                // text 是以 \n\n 结尾的当前编辑区内容
+                // 去掉末尾的 \n\n 得到纯文本段
+                const segment = text.slice(0, -2);
+
+                // 生成计时字符串
+                const h = Math.floor(timerTick / 3600);
+                const m = Math.floor((timerTick % 3600) / 60);
+                let timeStr = '';
+                if (h > 0) {
+                    timeStr = `${h}h${m}min(s)`;
+                } else {
+                    timeStr = `${m}min(s)`;
+                }
+
+                // 追加到文件：段文本 + \n\n + 计时 + \n\n
+                const appendContent = segment + '\n\n' + timeStr + '\n\n';
+                const filePath = currentFilePath;
+                const fullContent = committedContent + appendContent;
+
+                try {
+                    await enqueueFileWrite(() => apiPost('/api/solutions/save', {
+                        path: filePath,
+                        content: fullContent
+                    }));
+                    // 追加到已固定内容
+                    committedContent += appendContent;
+                    // 清空编辑器
+                    suppressEditorChange = true;
+                    try {
+                        cmEditor.setValue('');
+                    } finally {
+                        suppressEditorChange = false;
+                    }
+                    dirty = false;
+                    saveStatus.textContent = '已保存';
+                    saveStatus.className = 'save-status saved';
+                    // 更新预览（全文）
+                    renderPreview(committedContent);
+                } catch (e) {
+                    saveStatus.textContent = '提交失败';
+                    saveStatus.className = 'save-status error';
+                } finally {
+                    commitInProgress = false;
+                    if (cmEditor) cmEditor.setOption('readOnly', isCompleted);
+                }
+            }
+
+            // ---------- 渲染 Markdown 预览 ----------
+            async function renderPreview(content) {
+                const previewEl = document.getElementById('preview-area');
+                if (!content) {
+                    previewEl.innerHTML = '<p style="color:#656d76;">等待输入…</p>';
+                    return;
+                }
+                try {
+                    const html = marked.parse(content);
+                    previewEl.innerHTML = html;
+                    // 自动滚动到底部
+                    previewEl.scrollTop = previewEl.scrollHeight;
+                    // 对预览内容中的 LaTeX 进行渲染
+                    if (window.renderMathInElement) {
+                        renderMathInElement(previewEl, {
+                            delimiters: [
+                                { left: '$$', right: '$$', display: true },
+                                { left: '$', right: '$', display: false },
+                                { left: '\\(', right: '\\)', display: false },
+                                { left: '\\[', right: '\\]', display: true }
+                            ],
+                            throwOnError: false
+                        });
+                    }
+                } catch (e) {
+                    previewEl.innerHTML = `<p style="color:#cf222e;">渲染错误: ${e.message}</p>`;
+                }
+            }
+
+            // ---------- 初始化 CodeMirror 编辑器 ----------
+            function initEditor(content) {
+                if (cmEditor) {
+                    cmEditor.setValue(content);
+                    renderPreview(committedContent + content);
+                    return;
+                }
+
+                const textarea = document.getElementById('code-editor');
+                cmEditor = CodeMirror.fromTextArea(textarea, {
+                    mode: 'markdown',
+                    theme: 'default',
+                    lineWrapping: true,
+                    lineNumbers: true,
+                    autofocus: true,
+                    inputStyle: 'contenteditable'
+                });
+
+                cmEditor.setValue(content || '');
+                renderPreview(committedContent + (content || ''));
+
+                cmEditor.on('change', function () {
+                    if (suppressEditorChange || commitInProgress) return;
+                    dirty = true;
+                    saveStatus.textContent = '未保存';
+                    saveStatus.className = 'save-status';
+                    const val = cmEditor.getValue();
+
+                    // 检测是否以 \n\n 结尾（最后一段完成）
+                    if (val.endsWith('\n\n') && val.trim().length > 0) {
+                        commitSegment(val);
+                        return;
+                    }
+
+                    // 节流更新预览
+                    if (window._previewTimer) clearTimeout(window._previewTimer);
+                    window._previewTimer = setTimeout(() => renderPreview(committedContent + val), 300);
+
+                    // 延迟自动保存
+                    if (saveTimer) clearTimeout(saveTimer);
+                    saveTimer = setTimeout(() => {
+                        if (dirty && currentFilePath) {
+                            saveFile(currentFilePath);
+                        }
+                    }, 2000);
+                });
+
+                // 初始渲染预览（全文）
+                renderPreview(committedContent + (content || ''));
+            }
+
+            // ---------- 新建文件夹 ----------
+            btnNewFolder.addEventListener('click', () => {
+                inputFolderName.value = '';
+                const hint = currentFolder ? `（在 "${currentFolder}" 内创建）` : '（在根目录创建）';
+                inputFolderName.placeholder = hint;
+                modalFolder.classList.add('active');
+                setTimeout(() => inputFolderName.focus(), 100);
+            });
+
+            btnCancelFolder.addEventListener('click', () => {
+                modalFolder.classList.remove('active');
+            });
+
+            btnConfirmFolder.addEventListener('click', async () => {
+                const name = inputFolderName.value.trim();
+                if (!name) return;
+                const folderPath = currentFolder ? currentFolder + '/' + name : name;
+                try {
+                    await apiPost('/api/solutions/mkdir', { path: folderPath });
+                    modalFolder.classList.remove('active');
+                    await loadTree();
+                } catch (e) {
+                    alert('创建失败: ' + e.message);
+                }
+            });
+
+            // 回车确认
+            inputFolderName.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') btnConfirmFolder.click();
+            });
+
+            // ---------- 新建文件 ----------
+            btnNewFile.addEventListener('click', () => {
+                inputFileName.value = '';
+                const hint = currentFolder ? `（在 "${currentFolder}" 内创建）` : '（在根目录创建）';
+                inputFileName.placeholder = hint;
+                modalFile.classList.add('active');
+                setTimeout(() => inputFileName.focus(), 100);
+            });
+
+            btnCancelFile.addEventListener('click', () => {
+                modalFile.classList.remove('active');
+            });
+
+            btnConfirmFile.addEventListener('click', async () => {
+                const name = inputFileName.value.trim();
+                if (!name) return;
+                let filePath = name.endsWith('.md') ? name : name + '.md';
+                if (currentFolder) {
+                    filePath = currentFolder + '/' + filePath;
+                }
+                try {
+                    await apiPost('/api/solutions/new', { path: filePath, content: '' });
+                    modalFile.classList.remove('active');
+                    await loadTree();
+                    // 自动打开新建的文件
+                    currentFolder = null;
+                    openFile(filePath);
+                } catch (e) {
+                    alert('创建失败: ' + e.message);
+                }
+            });
+
+            inputFileName.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') btnConfirmFile.click();
+            });
+
+            // 点击遮罩关闭
+            document.querySelectorAll('.modal-overlay').forEach(el => {
+                el.addEventListener('click', (e) => {
+                    if (e.target === el) el.classList.remove('active');
+                });
+            });
+
+            // ---------- 完成按钮 ----------
+            completeBtn.addEventListener('click', async () => {
+                if (!currentFilePath) return;
+                if (isCompleted) {
+                    // 取消完成
+                    if (!confirm('取消完成状态？')) return;
+                    isCompleted = false;
+                    const key = normalizeMetaPath(currentFilePath);
+                    metaData[key] = { elapsed: timerTick, completed: false };
+                    await saveMeta();
+                    // 重新打开文件刷新状态
+                    await openFile(currentFilePath);
+                } else {
+                    // 标记完成
+                    isCompleted = true;
+                    stopTimer();
+                    const key = normalizeMetaPath(currentFilePath);
+                    metaData[key] = { elapsed: timerTick, completed: true };
+                    await saveMeta();
+                    mdEditor.classList.add('completed');
+                    timerEl.style.display = 'none';
+                    completeBtn.textContent = '已完成 ✓';
+                    completeBtn.className = 'complete-btn done';
+                    if (cmEditor) {
+                        cmEditor.setOption('readOnly', true);
+                    }
+                }
+            });
+
+            // ---------- 生成 Prompt ----------
+            promptBtn.addEventListener('click', async () => {
+                if (!currentFilePath) return;
+                try {
+                    // 保存当前文件
+                    if (dirty) {
+                        await saveFile(currentFilePath);
+                    }
+                    // 读取当前文件内容
+                    const fullContent = await apiGet('/api/solutions/read?file_path=' + encodeURIComponent(currentFilePath));
+                    const contentText = fullContent.content || '';
+                    // 读取 prompt 模板
+                    const promptResp = await fetch('/api/solutions/read-prompt');
+                    if (!promptResp.ok) throw new Error('无法读取 prompt 模板');
+                    const promptTemplate = await promptResp.text();
+                    // 替换 {{record}} 为文件内容
+                    const result = promptTemplate.replace('{{record}}', contentText);
+                    // 复制到剪切板
+                    await navigator.clipboard.writeText(result);
+                    promptBtn.textContent = '已复制 ✓';
+                    promptBtn.className = 'prompt-btn copied';
+                    setTimeout(() => {
+                        promptBtn.textContent = '生成 Prompt';
+                        promptBtn.className = 'prompt-btn';
+                    }, 2000);
+                } catch (e) {
+                    alert('生成 Prompt 失败: ' + e.message);
+                }
+            });
+
+            // ---------- 初始化 ----------
+            (async function initialize() {
+                await loadMeta();
+                await loadTree();
+            })();
+        })();
+    </script>
+
+</body>
+
+</html>

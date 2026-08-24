@@ -8,8 +8,9 @@ wheels/
 
 # Virtual environments
 .venv
-
 uv.lock
 
-data/*
 config.json
+api-key.env
+
+data/*.json

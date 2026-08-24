@@ -280,6 +280,27 @@
             flex-direction: row;
             margin-top: 50px;
         }
+
+        /* ---------- 解题日志入口 ---------- */
+        .solution-entry {
+            display: inline-block;
+            margin-top: 24px;
+            padding: 10px 24px;
+            background: #ffffff;
+            border: 1px solid #d0d7de;
+            border-radius: 8px;
+            color: #24292f;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+            transition: background 0.15s, box-shadow 0.15s;
+        }
+
+        .solution-entry:hover {
+            background: #f3f4f6;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
     </style>
 </head>
 
@@ -789,6 +810,10 @@
             setInterval(load_basic, 5000);
         })();
     </script>
+
+    <a href="/solution-journal" class="solution-entry" title="解题日志">
+        📝 解题日志
+    </a>
 
 </body>
 

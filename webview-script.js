@@ -375,23 +375,26 @@ function atcoder_record_list(user) {
     for (const row of rows) {
         const cells = row.querySelectorAll("td");
 
-        // 验证提交者是否匹配（第3列）
+        // 跳过空行
+        if (!cells.length) continue;
+
+        // 验证提交者是否匹配（用户列：User, td[2]）
         const commiter = cells[2].querySelector("a").innerText.trim();
         if (commiter !== user) continue;
 
-        // 提交时间（第1列）：<time class="fixtime-second"> 文本
+        // 提交时间（Submission Time, td[0]）：<time> 文本
         const timeText = cells[0].querySelector("time").innerText.trim();
 
-        // 题号（第2列）：a 链接提取 tasks/xxx 最后一段
+        // 题号（Task, td[1]）：a 链接提取 tasks/xxx 最后一段
         const taskHref = cells[1].querySelector("a").getAttribute("href");
-        const pid = taskHref.split("/tasks/").pop();
+        const pid = "Atcoder" + taskHref.split("/tasks/").pop();
 
-        // 状态（第7列）：检查 .label-success 是否包含 "AC" 文本
+        // 状态（Status, td[6]）：检查 .label 文本是否为 "AC"
         const statusCell = cells[6].querySelector(".label");
         const statusText = statusCell ? statusCell.innerText.trim() : "";
         const status = statusText === "AC";
 
-        // 提交号（第10列）：Detail 链接最后一段
+        // 提交号（Detail, td[9]）：Detail 链接最后一段
         const detailLink = cells[9].querySelector("a");
         const rid = "Atcoder" + detailLink.getAttribute("href").split("/").pop();
 
