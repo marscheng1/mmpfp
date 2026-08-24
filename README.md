@@ -2,7 +2,7 @@
 
 ## 项目说明
 
-刷题记录追踪应用，支持多 OJ 平台（Luogu, QOJ, Codeforces, HDU, AtCoder）的刷题记录统计。内置 **MCP 知识库服务**，可将 `data/solutions` 下的解题日志暴露为 AI 可调用的工具。
+刷题记录追踪应用，支持多 OJ 平台（Luogu, QOJ, Codeforces, HDU, AtCoder）的刷题记录统计。内置 **MCP 知识库服务**，可将配置的题解目录暴露为 AI 可调用的工具。
 
 ## 快速开始
 
@@ -13,10 +13,20 @@ uv sync
 # 复制配置文件
 cp config.json.sample config.json
 
-# 编辑 config.json 填入你的 OJ 用户 ID
+# 编辑 config.json 填入你的 OJ 用户 ID 和题解目录
 # 启动服务
 uv run uvicorn main:app --reload --host 127.0.0.1 --workers 1
 ```
+
+`SOLUTIONS_DIR` 用于配置题解文件的实际位置。相对路径以项目根目录为基准，也可以填写绝对路径。例如，要让 API 直接保存到本地 OI 仓库：
+
+```json
+{
+  "SOLUTIONS_DIR": "../OI/article/solutions"
+}
+```
+
+这样，mmpfp 中的 `data/solutions/<path>.md` 仍是默认目录约定，但 API 实际会读写 OI 仓库中的 `article/solutions/<path>.md`。题解文件由 OI 仓库管理，不会进入 mmpfp 的提交；请确保 `data/solutions/.gitignore` 继续忽略本地默认目录，并在 OI 仓库中提交 API 产生的修改。
 
 ## MCP 知识库服务
 
