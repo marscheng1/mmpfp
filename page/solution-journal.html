@@ -7,6 +7,7 @@
     <title>解题日志 - MMPFP</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/codemirror.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.18/theme/monokai.min.css" />
     <style>
         * {
             margin: 0;
@@ -571,6 +572,226 @@
             border-color: #1a7f37;
             color: #1a7f37;
         }
+
+        /* ---------- Dark mode overrides ---------- */
+        body[data-theme="dark"] {
+            background: #0b1115;
+            color: #c9d1d9;
+        }
+
+        body[data-theme="dark"] .header,
+        body[data-theme="dark"] .file-manager,
+        body[data-theme="dark"] .editor-toolbar,
+        body[data-theme="dark"] .status-panel {
+            background: #071014;
+            border-color: #22272a;
+            color: #c9d1d9;
+        }
+
+        body[data-theme="dark"] .file-manager {
+            border-right-color: #22272a;
+        }
+
+        body[data-theme="dark"] .status-panel {
+            border-left-color: #22272a;
+        }
+
+        body[data-theme="dark"] .file-tree .tree-item {
+            color: #c9d1d9;
+        }
+
+        body[data-theme="dark"] .file-tree .tree-item:hover {
+            background: #07121a;
+        }
+
+        body[data-theme="dark"] .file-tree .tree-item.active {
+            background: #053a6b;
+            color: #cfe9ff;
+        }
+
+        body[data-theme="dark"] #preview-area,
+        body[data-theme="dark"] #code-editor-wrapper {
+            background: #010409;
+            color: #c9d1d9;
+            border-color: #22272a;
+        }
+
+        /* Ensure editor area and empty state use dark backgrounds when no file is open */
+        body[data-theme="dark"] .main-container {
+            background: transparent;
+        }
+
+        body[data-theme="dark"] .editor-area {
+            background: #071014;
+        }
+
+        body[data-theme="dark"] .empty-state {
+            color: #8897a6;
+            background: transparent;
+        }
+
+        body[data-theme="dark"] .empty-state .big-icon {
+            color: #8897a6;
+            opacity: 0.7;
+        }
+
+        body[data-theme="dark"] .file-label {
+            color: #cfe9ff;
+        }
+
+        body[data-theme="dark"] pre,
+        body[data-theme="dark"] code {
+            background: #0b1115;
+            color: #e6edf3;
+            border-color: #22272a;
+        }
+
+        /* More specific preview code blocks */
+        body[data-theme="dark"] #preview-area pre,
+        body[data-theme="dark"] #preview-area pre code,
+        body[data-theme="dark"] #preview-area code {
+            background: #0b1115 !important;
+            color: #e6edf3 !important;
+            border-color: #22272a !important;
+        }
+
+        /* Modal placeholder/input color */
+        body[data-theme="dark"] input::placeholder,
+        body[data-theme="dark"] .modal-box input::placeholder {
+            color: #8897a6;
+        }
+
+        body[data-theme="dark"] .modal-box {
+            background: #071014;
+            color: #c9d1d9;
+        }
+
+        /* CodeMirror dark adjustments */
+        body[data-theme="dark"] .CodeMirror {
+            background: #010409 !important;
+            color: #c9d1d9 !important;
+        }
+
+        body[data-theme="dark"] .CodeMirror-scroll {
+            background: #010409 !important;
+        }
+
+        body[data-theme="dark"] .CodeMirror-gutters {
+            background: #071014 !important;
+            border-right: 1px solid #22272a !important;
+            color: #8897a6 !important;
+        }
+
+        /* Buttons and interactive elements */
+        body[data-theme="dark"] .complete-btn {
+            border-color: #2b6f44;
+            background: none;
+            color: #c9d1d9;
+        }
+
+        body[data-theme="dark"] .complete-btn:hover {
+            background: rgba(43, 111, 68, 0.12);
+        }
+
+        body[data-theme="dark"] .prompt-btn {
+            border-color: #2b6f44;
+            background: none;
+            color: #c9d1d9;
+        }
+
+        body[data-theme="dark"] .prompt-btn:hover {
+            background: rgba(43, 111, 68, 0.06);
+            color: #e6edf3;
+        }
+
+        body[data-theme="dark"] .prompt-btn.copied {
+            background: #114b2b;
+            color: #dafbe1;
+            border-color: #1a7f37;
+        }
+
+        /* Header and links */
+        body[data-theme="dark"] .back-link {
+            color: #9ad1ff;
+        }
+
+        body[data-theme="dark"] .back-link:hover {
+            color: #cfe9ff;
+            text-decoration: underline;
+        }
+
+        body[data-theme="dark"] .header h1 {
+            color: #cfe9ff;
+        }
+
+        /* File manager header buttons */
+        body[data-theme="dark"] .file-manager-header span {
+            color: #c9d1d9;
+        }
+
+        body[data-theme="dark"] .file-manager-header .actions button {
+            background: none;
+            border: 1px solid #2b2f33;
+            color: #c9d1d9;
+        }
+
+        body[data-theme="dark"] .file-manager-header .actions button:hover {
+            background: #07121a;
+            border-color: #3a3f44;
+        }
+
+        /* Editor toolbar */
+        body[data-theme="dark"] .editor-toolbar .file-label {
+            color: #cfe9ff;
+        }
+
+        /* Empty state */
+        body[data-theme="dark"] .empty-state {
+            color: #8897a6;
+        }
+
+        body[data-theme="dark"] .empty-state .big-icon {
+            opacity: 0.6;
+        }
+
+        /* Inputs and modals */
+        body[data-theme="dark"] input,
+        body[data-theme="dark"] .modal-box input {
+            background: #071014;
+            color: #c9d1d9;
+            border: 1px solid #22272a;
+        }
+
+        body[data-theme="dark"] .modal-overlay {
+            background: rgba(0, 0, 0, 0.6);
+        }
+
+        /* Delete buttons */
+        body[data-theme="dark"] .delete-btn {
+            color: #8897a6;
+        }
+
+        body[data-theme="dark"] .delete-btn:hover {
+            color: #ffb3b3;
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        body[data-theme="dark"] .file-tree .tree-item .tree-connector {
+            background: #2b3338;
+        }
+
+        /* Preview text colors */
+        body[data-theme="dark"] #preview-area h1,
+        body[data-theme="dark"] #preview-area h2,
+        body[data-theme="dark"] #preview-area h3 {
+            color: #e6edf3;
+        }
+
+        body[data-theme="dark"] #preview-area p,
+        body[data-theme="dark"] #preview-area li,
+        body[data-theme="dark"] #preview-area td {
+            color: #c9d1d9;
+        }
     </style>
 </head>
 
@@ -580,6 +801,7 @@
     <div class="header">
         <a class="back-link" href="/">&larr; 返回主页</a>
         <h1>解题日志</h1>
+        <button id="btn-theme-toggle" class="back-link" title="切换主题" style="margin-left:auto;">🌙</button>
     </div>
 
     <!-- 主容器 -->
@@ -737,16 +959,14 @@
 
             // ---------- 计时器 ----------
             async function loadMeta() {
-                try {
-                    metaData = await apiGet('/api/solutions/meta');
-                } catch (e) {
-                    metaData = {};
-                }
+                // 读取失败不能当作“服务端没有数据”，否则恢复后会把计时覆盖为零。
+                metaData = await apiGet('/api/solutions/meta');
             }
 
-            async function saveMeta() {
+            async function saveMetaEntry(key) {
                 try {
-                    await apiPost('/api/solutions/meta/batch', { items: metaData });
+                    const meta = metaData[key];
+                    if (meta) await apiPost('/api/solutions/meta', { path: key, ...meta });
                 } catch (e) {
                     // 静默失败
                 }
@@ -787,7 +1007,7 @@
                 syncTimer();
                 const key = normalizeMetaPath(currentFilePath);
                 metaData[key] = { elapsed: timerTick, completed: false };
-                return saveMeta();
+                return saveMetaEntry(key);
             }
 
             function enqueueFileWrite(operation) {
@@ -876,7 +1096,7 @@
                                 delete metaData[key];
                             }
                         }
-                        await saveMeta();
+                        await apiPost('/api/solutions/meta/delete', { path: dirPath });
                         if (currentFilePath && currentFilePath.startsWith(dir._fullPath || dir.name)) {
                             currentFilePath = null;
                             fileLabel.textContent = '选择或创建一个文件';
@@ -963,7 +1183,7 @@
                         await apiPost('/api/solutions/delete', { path: filePath });
                         // 删除对应的 meta 数据
                         delete metaData[normalizeMetaPath(filePath)];
-                        await saveMeta();
+                        await apiPost('/api/solutions/meta/delete', { path: filePath });
                         if (currentFilePath === filePath) {
                             currentFilePath = null;
                             fileLabel.textContent = '选择或创建一个文件';
@@ -1119,6 +1339,11 @@
                 if (commitInProgress || !currentFilePath) return;
                 commitInProgress = true;
                 if (saveTimer) clearTimeout(saveTimer);
+                // 清除任何挂起的预览定时器，避免旧的预览回调在提交后再次渲染（导致重复段落）
+                if (window._previewTimer) {
+                    clearTimeout(window._previewTimer);
+                    window._previewTimer = null;
+                }
                 if (cmEditor) cmEditor.setOption('readOnly', true);
 
                 // text 是以 \n\n 结尾的当前编辑区内容
@@ -1206,9 +1431,10 @@
                 }
 
                 const textarea = document.getElementById('code-editor');
+                const cmTheme = document.body.getAttribute('data-theme') === 'dark' ? 'monokai' : 'default';
                 cmEditor = CodeMirror.fromTextArea(textarea, {
                     mode: 'markdown',
-                    theme: 'default',
+                    theme: cmTheme,
                     lineWrapping: true,
                     lineNumbers: true,
                     autofocus: true,
@@ -1331,7 +1557,7 @@
                     isCompleted = false;
                     const key = normalizeMetaPath(currentFilePath);
                     metaData[key] = { elapsed: timerTick, completed: false };
-                    await saveMeta();
+                    await saveMetaEntry(key);
                     // 重新打开文件刷新状态
                     await openFile(currentFilePath);
                 } else {
@@ -1340,7 +1566,7 @@
                     stopTimer();
                     const key = normalizeMetaPath(currentFilePath);
                     metaData[key] = { elapsed: timerTick, completed: true };
-                    await saveMeta();
+                    await saveMetaEntry(key);
                     mdEditor.classList.add('completed');
                     timerEl.style.display = 'none';
                     completeBtn.textContent = '已完成 ✓';
@@ -1382,9 +1608,57 @@
             });
 
             // ---------- 初始化 ----------
+            // ---------- 主题支持（深色模式） ----------
+            const themeToggleBtn = document.getElementById('btn-theme-toggle');
+            function applyTheme(theme) {
+                if (theme === 'dark') {
+                    document.body.setAttribute('data-theme', 'dark');
+                    if (themeToggleBtn) themeToggleBtn.textContent = '☀️';
+                } else {
+                    document.body.removeAttribute('data-theme');
+                    if (themeToggleBtn) themeToggleBtn.textContent = '🌙';
+                }
+                // Update CodeMirror theme if editor already initialized
+                try {
+                    if (typeof cmEditor !== 'undefined' && cmEditor) {
+                        const t = theme === 'dark' ? 'monokai' : 'default';
+                        cmEditor.setOption('theme', t);
+                    }
+                } catch (e) {
+                    // ignore
+                }
+            }
+
+            function initTheme() {
+                try {
+                    const saved = localStorage.getItem('mmpfp-theme');
+                    if (saved) {
+                        applyTheme(saved);
+                        return;
+                    }
+                    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                        applyTheme('dark');
+                    } else {
+                        applyTheme('light');
+                    }
+                } catch (e) {
+                    // ignore
+                }
+            }
+
+            if (themeToggleBtn) {
+                themeToggleBtn.addEventListener('click', () => {
+                    const isDark = document.body.getAttribute('data-theme') === 'dark';
+                    const next = isDark ? 'light' : 'dark';
+                    applyTheme(next);
+                    try { localStorage.setItem('mmpfp-theme', next); } catch (e) { }
+                });
+            }
+
             (async function initialize() {
                 await loadMeta();
                 await loadTree();
+                initTheme();
             })();
         })();
     </script>

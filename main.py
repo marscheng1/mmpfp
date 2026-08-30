@@ -1,18 +1,16 @@
 import json
 import logging
 import os
-import secrets
 import tempfile
 import threading
 import time
 from contextlib import asynccontextmanager
 from os import path
 from datetime import datetime
-from typing import Any, Callable, Literal, cast
+from typing import Any, Callable, cast
 
-from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response
+from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.responses import HTMLResponse
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 from pydantic import BaseModel, Field
 
@@ -20,11 +18,6 @@ from config import (
     ATCODER_ID, CF_ID, DATA_FILE, HDU_ID, LUOGU_ID, META_FILE, PAGE_DIR,
     PROMPT_FILE, QOJ_ID, SOLUTIONS_DIR, day_id, day_len, month_id, month_len,
 )
-
-# ===== MCP 知识库服务 =====
-from fastapi_mcp import FastApiMCP  # type: ignore
-from mcp_knowledge import list_knowledge, read_knowledge, search_knowledge
-
 
 logger = logging.getLogger(__name__)
 MAX_CONTENT_SIZE = 2 * 1024 * 1024
@@ -267,21 +260,45 @@ def load_meta() -> dict[str, dict[str, object]]:
         return {}
 
 
-def save_meta(meta: dict[str, dict[str, object]]):
+def _write_meta(meta: dict[str, dict[str, object]]):
     """保存计时器/完成状态元数据"""
+    directory = path.dirname(META_FILE)
+    os.makedirs(directory, exist_ok=True)
+    fd, temporary_file = tempfile.mkstemp(
+        dir=directory, prefix="solutions-meta.", suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            json.dump(meta, f, indent=2, ensure_ascii=False)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(temporary_file, META_FILE)
+    finally:
+        if path.exists(temporary_file):
+            os.remove(temporary_file)
+
+
+def save_meta(meta: dict[str, dict[str, object]]):
     with meta_lock:
-        directory = path.dirname(META_FILE)
-        fd, temporary_file = tempfile.mkstemp(
-            dir=directory, prefix="solutions-meta.", suffix=".tmp")
-        try:
-            with os.fdopen(fd, "w", encoding="utf-8") as f:
-                json.dump(meta, f, indent=2, ensure_ascii=False)
-                f.flush()
-                os.fsync(f.fileno())
-            os.replace(temporary_file, META_FILE)
-        finally:
-            if path.exists(temporary_file):
-                os.remove(temporary_file)
+        _write_meta(meta)
+
+
+def merge_meta(items: dict[str, dict[str, object]]):
+    """原子合并元数据；旧客户端或延迟请求不得让计时倒退。"""
+    with meta_lock:
+        meta = load_meta()
+        for file_path, item in items.items():
+            old = meta.get(file_path, {})
+            old_elapsed = old.get("elapsed", 0)
+            new_elapsed = item.get("elapsed", 0)
+            if not isinstance(old_elapsed, int) or isinstance(old_elapsed, bool):
+                old_elapsed = 0
+            if not isinstance(new_elapsed, int) or isinstance(new_elapsed, bool):
+                continue
+            meta[file_path] = {
+                "elapsed": max(old_elapsed, new_elapsed),
+                "completed": bool(item.get("completed", False)),
+            }
+        _write_meta(meta)
 
 
 def safe_solutions_path(relative_path: str) -> str:
@@ -485,99 +502,26 @@ def solutions_read_prompt():
 @app.post("/api/solutions/meta")
 def solutions_meta_set(data: MetaRequest):
     """保存单个文件的计时器/完成状态"""
-    meta = load_meta()
-    file_path = data.path
-    elapsed = data.elapsed
-    completed = data.completed
-    meta[file_path] = {"elapsed": elapsed, "completed": completed}
-    save_meta(meta)
+    merge_meta({data.path: {"elapsed": data.elapsed, "completed": data.completed}})
     return {"ok": True}
 
 
 @app.post("/api/solutions/meta/batch")
 def solutions_meta_batch(data: MetaBatchRequest):
     """批量保存所有文件的计时器/完成状态"""
-    items = data.items
-    save_meta(items)
+    merge_meta(data.items)
     return {"ok": True}
 
 
-# ===== MCP 知识库服务 =====
-
-# Bearer Token 认证依赖（用于 REST API 直接调用）
-_auth_token = os.environ.get("MCP_AUTH_TOKEN") or secrets.token_urlsafe(32)
-if "MCP_AUTH_TOKEN" not in os.environ:
-    logger.warning("MCP_AUTH_TOKEN 未设置，已生成仅当前进程有效的随机令牌")
-_security = HTTPBearer(auto_error=False)
-
-
-def verify_mcp_token(credentials: HTTPAuthorizationCredentials = Depends(_security)):
-    """验证 MCP 请求的 Bearer Token"""
-    if not credentials:
-        raise HTTPException(401, "缺少认证令牌")
-    if not secrets.compare_digest(credentials.credentials, _auth_token):
-        raise HTTPException(403, "无效的认证令牌")
-    return credentials
+@app.post("/api/solutions/meta/delete")
+def solutions_meta_delete(data: PathRequest):
+    """删除文件或目录对应的计时元数据。"""
+    key = data.path.removesuffix(".md").replace("\\", "/").strip("/")
+    with meta_lock:
+        meta = load_meta()
+        meta = {name: value for name, value in meta.items()
+                if name != key and not name.startswith(key + "/")}
+        _write_meta(meta)
+    return {"ok": True}
 
 
-# 知识库 API 端点（同时也是 MCP 工具来源）
-# 注意：MCP FastApiMCP 通过内部 ASGI 传输调用，不走 HTTP 认证
-# 外部对 /api/knowledge/* 的直接 REST 调用仍需认证
-@app.get(
-    "/api/knowledge/list",
-    operation_id="list_articles",
-    dependencies=[Depends(verify_mcp_token)],
-)
-def api_knowledge_list(
-    limit: int | None = Query(default=None, ge=1, le=100),
-    time_range: str | None = Query(default=None, max_length=50),
-    sort_by: Literal["created_at", "modified_at", "name"] = "created_at",
-    order: Literal["asc", "desc"] = "desc",
-):
-    """列出知识库文章，支持筛选。"""
-    try:
-        return list_knowledge(limit=limit, time_range=time_range, sort_by=sort_by, order=order)
-    except ValueError as exc:
-        raise HTTPException(422, str(exc)) from exc
-
-
-@app.get(
-    "/api/knowledge/read",
-    operation_id="read_article",
-    dependencies=[Depends(verify_mcp_token)],
-)
-def api_knowledge_read(file_path: str = Query(min_length=1, max_length=500)):
-    """读取指定知识库文章的 Markdown 内容。"""
-    return read_knowledge(file_path)
-
-
-@app.get(
-    "/api/knowledge/search",
-    operation_id="search_articles",
-    dependencies=[Depends(verify_mcp_token)],
-)
-def api_knowledge_search(query: str = Query(min_length=1, max_length=200), limit: int = Query(default=10, ge=1, le=100)):
-    """全文搜索知识库文章。"""
-    try:
-        return search_knowledge(query, limit=limit)
-    except ValueError as exc:
-        raise HTTPException(422, str(exc)) from exc
-
-
-# 使用 FastAPI-MCP 自动将知识库 API 端点暴露为 MCP 工具
-# 通过 SSE 协议挂载：SSE GET /mcp，消息 POST /mcp/messages/
-# 外部 MCP 客户端通过 SSE 连接时，需要在 HTTP 请求头中携带 Authorization: Bearer <token>
-# FastApiMCP 会将 SSE 请求中的 authorization 头自动转发到内部 API 调用
-mcp_server = FastApiMCP(
-    app,
-    name="mmpfp-knowledge",
-    description="知识库服务，提供 data/solutions 下 Markdown 文章的读取、筛选和搜索功能",
-    include_operations=[
-        "list_articles",
-        "read_article",
-        "search_articles",
-    ],
-    # 将 SSE 请求的 authorization 头转发到内部 API 调用
-    headers=["authorization"],
-)
-mcp_server.mount_sse(mount_path="/mcp")

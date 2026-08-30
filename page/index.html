@@ -301,10 +301,142 @@
             background: #f3f4f6;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
         }
+
+        /* Dark theme overrides (follows same localStorage key 'mmpfp-theme') */
+        body[data-theme="dark"] {
+            background: #071014;
+            color: #c9d1d9;
+        }
+
+        body[data-theme="dark"] .heatmap-wrapper,
+        body[data-theme="dark"] .chart-container,
+        body[data-theme="dark"] .solution-entry {
+            background: #071014;
+            color: #c9d1d9;
+            border-color: #22272a;
+            box-shadow: none;
+        }
+
+        body[data-theme="dark"] .solution-entry:hover {
+            background: #08131a;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+        }
+
+        body[data-theme="dark"] .tooltip {
+            background: #0b1115;
+            color: #cfe9ff;
+        }
+
+        body[data-theme="dark"] .status {
+            color: #9aa7b3;
+        }
+
+        /* Code block / pre (if any) */
+        body[data-theme="dark"] pre,
+        body[data-theme="dark"] code {
+            background: #0b1115;
+            color: #e6edf3;
+            border-color: #22272a;
+        }
+
+        /* Page header and toggle button */
+        .page-header {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            z-index: 2000;
+        }
+
+        #btn-theme-toggle {
+            background: none;
+            border: 1px solid #d0d7de;
+            border-radius: 8px;
+            padding: 6px 10px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        body[data-theme="dark"] #btn-theme-toggle {
+            border-color: #2b2f33;
+            color: #c9d1d9;
+            background: #071014;
+        }
+
+        /* Ensure header toggle is above other elements and clickable */
+        /* (Positioning/stacking handled by earlier rules; keep pointer events enabled) */
+        #btn-theme-toggle {
+            pointer-events: auto;
+        }
+
+        /* Heatmap dark colors */
+        body[data-theme="dark"] .day-cell.level-0 {
+            background-color: #071014;
+        }
+
+        body[data-theme="dark"] .day-cell.level-1 {
+            background-color: #083624;
+        }
+
+        body[data-theme="dark"] .day-cell.level-2 {
+            background-color: #0f5a36;
+        }
+
+        body[data-theme="dark"] .day-cell.level-3 {
+            background-color: #177a49;
+        }
+
+        body[data-theme="dark"] .day-cell.level-4 {
+            background-color: #1f8f4f;
+        }
+
+        body[data-theme="dark"] .day-cell {
+            box-shadow: none;
+            border-radius: 2px;
+        }
+
+        body[data-theme="dark"] .day-cell.level-0[style] {
+            opacity: 1;
+        }
+
+        /* Legend swatches */
+        body[data-theme="dark"] .legend .swatch.l0 {
+            background-color: #071014;
+        }
+
+        body[data-theme="dark"] .legend .swatch.l1 {
+            background-color: #083624;
+        }
+
+        body[data-theme="dark"] .legend .swatch.l2 {
+            background-color: #0f5a36;
+        }
+
+        body[data-theme="dark"] .legend .swatch.l3 {
+            background-color: #177a49;
+        }
+
+        body[data-theme="dark"] .legend .swatch.l4 {
+            background-color: #1f8f4f;
+        }
+
+        /* Hover effect for heatmap cells in dark mode */
+        body[data-theme="dark"] .day-cell:hover {
+            transform: scale(1.3);
+            z-index: 2;
+            box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.06);
+        }
     </style>
 </head>
 
 <body>
+
+    <div class="page-header">
+        <button id="btn-theme-toggle" title="切换主题">🌙</button>
+    </div>
 
     <div class="heatmap-wrapper" id="app">
         <!-- 由 JavaScript 动态渲染 -->
@@ -335,6 +467,51 @@
     <script>
         (function () {
             'use strict';
+
+            // Initialize theme from localStorage or system preference
+            try {
+                const saved = localStorage.getItem('mmpfp-theme');
+                if (saved === 'dark') {
+                    document.body.setAttribute('data-theme', 'dark');
+                } else if (!saved && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                    document.body.setAttribute('data-theme', 'dark');
+                }
+            } catch (e) {
+                // ignore
+            }
+
+            // Theme toggle button behavior (sync with localStorage key 'mmpfp-theme')
+            (function () {
+                const btn = document.getElementById('btn-theme-toggle');
+                function updateBtn() {
+                    if (!btn) return;
+                    const isDark = document.body.getAttribute('data-theme') === 'dark';
+                    btn.textContent = isDark ? '☀️' : '🌙';
+                }
+
+                function setTheme(theme) {
+                    try {
+                        if (theme === 'dark') {
+                            document.body.setAttribute('data-theme', 'dark');
+                        } else {
+                            document.body.removeAttribute('data-theme');
+                        }
+                        localStorage.setItem('mmpfp-theme', theme);
+                    } catch (e) { }
+                    updateBtn();
+                    init();
+                }
+
+                if (btn) {
+                    btn.addEventListener('click', () => {
+                        const isDark = document.body.getAttribute('data-theme') === 'dark';
+                        setTheme(isDark ? 'light' : 'dark');
+                    });
+                }
+
+                // initial
+                updateBtn();
+            })();
 
             // ---------- 工具函数 ----------
             function formatDate(date) {
@@ -638,14 +815,22 @@
                     container.highcharts.destroy();
                 }
 
+                const isDark = document.body.getAttribute('data-theme') === 'dark';
+                const chartBg = isDark ? '#071014' : '#ffffff';
+                const textColor = isDark ? '#c9d1d9' : '#24292f';
+                const axisColor = isDark ? '#9aa7b3' : '#57606a';
+
                 Highcharts.chart(containerId, {
                     chart: {
                         type: 'column',
                         zoomType: 'xy',
                         style: {
-                            fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+                            fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                            color: textColor
                         },
-                        height: 300
+                        height: 300,
+                        backgroundColor: chartBg,
+                        plotBackgroundColor: chartBg
                     },
                     title: {
                         text: ""
@@ -658,32 +843,36 @@
                         crosshair: true,
                         labels: {
                             rotation: -45,
-                            style: { fontSize: '10px' }
-                        }
+                            style: { fontSize: '10px', color: axisColor }
+                        },
+                        lineColor: axisColor,
+                        tickColor: axisColor
                     },
                     yAxis: [{
                         // 左轴 - 柱状图（通过数）
                         title: {
                             text: `当${unit}通过数`,
-                            style: { fontSize: '11px' }
+                            style: { fontSize: '11px', color: textColor }
                         },
                         labels: {
-                            style: { fontSize: '10px' }
+                            style: { fontSize: '10px', color: axisColor }
                         }
                     }, {
                         // 右轴 - 折线图（累计总和）
                         title: {
                             text: '累计通过',
-                            style: { fontSize: '11px' }
+                            style: { fontSize: '11px', color: textColor }
                         },
                         labels: {
-                            style: { fontSize: '10px' }
+                            style: { fontSize: '10px', color: axisColor }
                         },
                         opposite: true
                     }],
                     tooltip: {
                         shared: true,
-                        valueDecimals: 0
+                        valueDecimals: 0,
+                        backgroundColor: isDark ? '#0b1115' : undefined,
+                        style: { color: isDark ? '#e6edf3' : undefined }
                     },
                     series: [{
                         name: `当${unit}通过数`,
