@@ -1061,6 +1061,8 @@
 
             function renderDir(dir) {
                 const container = document.createElement('div');
+                const dirPath = dir._fullPath || dir.name;
+                const expandedInitially = currentFilePath && currentFilePath.startsWith(dirPath + '/');
 
                 const dirItem = document.createElement('div');
                 dirItem.className = 'tree-item dir-item';
@@ -1069,7 +1071,7 @@
                 dirItem.appendChild(connector);
                 const toggle = document.createElement('span');
                 toggle.className = 'toggle';
-                toggle.textContent = '▼';
+                toggle.textContent = expandedInitially ? '▼' : '▶';
                 dirItem.appendChild(toggle);
                 const icon = document.createElement('span');
                 icon.className = 'icon';
@@ -1118,8 +1120,9 @@
 
                 const childContainer = document.createElement('div');
                 childContainer.className = 'child-container';
+                childContainer.style.display = expandedInitially ? 'block' : 'none';
 
-                let expanded = true;
+                let expanded = expandedInitially;
                 dirItem.addEventListener('click', (e) => {
                     e.stopPropagation();
                     // 选中文件夹
@@ -1393,6 +1396,31 @@
                 }
             }
 
+            // ---------- 滚动预览到底部 ----------
+            // KaTeX 渲染与字体加载会改变预览区高度，需多次校正才能保证真正到底。
+            function scrollPreviewToBottom(previewEl) {
+                const scroll = function () {
+                    previewEl.scrollTop = previewEl.scrollHeight;
+                };
+                // 立即滚动（覆盖 KaTeX 同步替换 DOM 后的高度）
+                scroll();
+                // 下一帧再校正（覆盖同步重排尚未完成的情况）
+                if (window.requestAnimationFrame) {
+                    requestAnimationFrame(scroll);
+                }
+                // 短延时校正（覆盖字体加载引起的高度变化）
+                setTimeout(scroll, 50);
+                setTimeout(scroll, 200);
+                // 字体就绪后再校正（KaTeX 首次渲染需加载专用字体，度量会变化）
+                try {
+                    if (document.fonts && document.fonts.ready) {
+                        document.fonts.ready.then(scroll);
+                    }
+                } catch (e) {
+                    // ignore
+                }
+            }
+
             // ---------- 渲染 Markdown 预览 ----------
             async function renderPreview(content) {
                 const previewEl = document.getElementById('preview-area');
@@ -1403,9 +1431,10 @@
                 try {
                     const html = marked.parse(content);
                     previewEl.innerHTML = html;
-                    // 自动滚动到底部
-                    previewEl.scrollTop = previewEl.scrollHeight;
-                    // 对预览内容中的 LaTeX 进行渲染
+                    // 先对预览内容中的 LaTeX 进行渲染：KaTeX 会把原始公式文本
+                    // 替换为较高的渲染块（尤其是 display 公式 / 多行公式），所以
+                    // 必须在渲染完成后再计算高度并滚动，否则 scrollHeight 仍是
+                    // 渲染前的高度，导致无法真正滚到底部。
                     if (window.renderMathInElement) {
                         renderMathInElement(previewEl, {
                             delimiters: [
@@ -1414,9 +1443,15 @@
                                 { left: '\\(', right: '\\)', display: false },
                                 { left: '\\[', right: '\\]', display: true }
                             ],
+                            macros: {
+                                '\\Prod': '\\displaystyle\\prod\\limits',
+                                '\\Sum': '\\displaystyle\\sum\\limits'
+                            },
                             throwOnError: false
                         });
                     }
+                    // 在 LaTeX 渲染之后再滚动到底部（含异步重排 / 字体加载的多次校正）
+                    scrollPreviewToBottom(previewEl);
                 } catch (e) {
                     previewEl.innerHTML = `<p style="color:#cf222e;">渲染错误: ${e.message}</p>`;
                 }
@@ -1528,10 +1563,10 @@
                 try {
                     await apiPost('/api/solutions/new', { path: filePath, content: '' });
                     modalFile.classList.remove('active');
-                    await loadTree();
                     // 自动打开新建的文件
                     currentFolder = null;
-                    openFile(filePath);
+                    await openFile(filePath);
+                    await loadTree();
                 } catch (e) {
                     alert('创建失败: ' + e.message);
                 }

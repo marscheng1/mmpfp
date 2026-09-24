@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>能力证据库 - MMPFP</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background: #f6f8fa;
+            color: #1f2328;
+            padding: 24px;
+            line-height: 1.55;
+        }
+
+        .wrap {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            font-size: 22px;
+            font-weight: 600;
+        }
+
+        h2 {
+            font-size: 16px;
+            font-weight: 600;
+            margin: 26px 0 10px;
+        }
+
+        .sub {
+            color: #59636e;
+            font-size: 13px;
+            margin-top: 6px;
+            word-break: break-all;
+        }
+
+        .card {
+            background: #fff;
+            border: 1px solid #d1d9e0;
+            border-radius: 10px;
+            padding: 16px 18px;
+            margin-bottom: 16px;
+        }
+
+        .stat-row {
+            display: flex;
+            gap: 26px;
+            flex-wrap: wrap;
+            font-size: 13px;
+            color: #59636e;
+        }
+
+        .stat-row strong {
+            color: #1f2328;
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .muted {
+            color: #59636e;
+        }
+
+        .warn {
+            background: #fff8c5;
+            border: 1px solid #d4a72c;
+            border-radius: 8px;
+            padding: 10px 12px;
+            font-size: 13px;
+            margin-bottom: 12px;
+        }
+
+        .fact {
+            border: 1px solid #d1d9e0;
+            border-radius: 8px;
+            padding: 10px 12px;
+            margin-bottom: 10px;
+        }
+
+        .fact h3 {
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .fact .meta {
+            font-size: 12px;
+            color: #59636e;
+            margin: 4px 0 8px;
+        }
+
+        .fact .note {
+            font-size: 13px;
+            margin-bottom: 8px;
+        }
+
+        .status {
+            font-size: 13px;
+            color: #59636e;
+        }
+
+        .fact.superseded-fact {
+            border-color: #f0b27a;
+            background: #fffaf5;
+        }
+
+        .links {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .link {
+            font-size: 12px;
+            border-left: 3px solid #d1d9e0;
+            padding-left: 8px;
+        }
+
+        .pill {
+            display: inline-block;
+            border-radius: 999px;
+            padding: 1px 8px;
+            font-size: 12px;
+            border: 1px solid transparent;
+            white-space: nowrap;
+        }
+
+        .core {
+            background: #ddf4ff;
+            border-color: #54aeff;
+            color: #0550ae;
+        }
+
+        .auxiliary {
+            background: #f6f8fa;
+            border-color: #d1d9e0;
+            color: #59636e;
+        }
+
+        .out {
+            background: #fff1e5;
+            border-color: #f0b27a;
+            color: #953800;
+        }
+
+        .pos {
+            color: #1a7f37;
+        }
+
+        .neg {
+            color: #cf222e;
+        }
+
+        .bnd {
+            color: #9a6700;
+        }
+
+        .filter-row {
+            display: flex;
+            gap: 14px;
+            flex-wrap: wrap;
+            align-items: flex-end;
+        }
+
+        .filter-row label {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            font-size: 12px;
+            color: #59636e;
+        }
+
+        select,
+        input {
+            font: inherit;
+            padding: 4px 8px;
+            border: 1px solid #d1d9e0;
+            border-radius: 6px;
+            background: #fff;
+            color: #1f2328;
+        }
+
+        button {
+            font: inherit;
+            padding: 5px 12px;
+            border-radius: 6px;
+            border: 1px solid #d1d9e0;
+            background: #f6f8fa;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #eef1f4;
+        }
+
+        .status {
+            font-size: 13px;
+            color: #59636e;
+        }
+
+        .hit {
+            border: 1px solid #d1d9e0;
+            border-radius: 8px;
+            padding: 8px 10px;
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
+
+        .hit .head {
+            font-weight: 600;
+        }
+
+        .hit .rows {
+            font-size: 12px;
+            color: #59636e;
+            margin-top: 4px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="wrap">
+        <header>
+            <h1>能力证据库（Evidence Ledger）</h1>
+            <div class="sub" id="source">加载中…</div>
+        </div>
+
+        <div id="warnings"></div>
+
+        <div class="card">
+            <div class="stat-row" id="stats"></div>
+        </div>
+
+        <h2>按能力 / 难度检索</h2>
+        <div class="card">
+            <div class="filter-row">
+                <label>能力
+                    <select id="fSkill">
+                        <option value="">（全部）</option>
+                    </select>
+                </label>
+                <label>资格
+                    <select id="fRole">
+                        <option value="">（全部）</option>
+                        <option value="core">core 核心</option>
+                        <option value="auxiliary">auxiliary 辅助</option>
+                        <option value="out">out 不参与</option>
+                    </select>
+                </label>
+                <label>正负侧
+                    <select id="fEffect">
+                        <option value="">（全部）</option>
+                        <option value="positive">positive 正证</option>
+                        <option value="negative">negative 负证</option>
+                        <option value="boundary">boundary 仅边界</option>
+                    </select>
+                </label>
+                <label>difficulty
+                    <input id="fDifficulty" placeholder="如 2500，或 2400,2500" style="width:170px;" />
+                </label>
+                <label>难度区间
+                    <input id="fDifficultyMin" type="number" placeholder="下界" style="width:80px;" />
+                    ~
+                    <input id="fDifficultyMax" type="number" placeholder="上界" style="width:80px;" />
+                </label>
+                <label>最多
+                    <input id="fLimit" type="number" min="1" max="1000" value="200" style="width:80px;" />
+                </label>
+                <button id="fRun">检索</button>
+                <button id="fClear">清空</button>
+                <span class="status" id="fStatus"></span>
+            </div>
+            <div class="muted" style="font-size:12px;margin:6px 0 10px;">
+                <code>difficulty</code> 取的是 Link <strong>所属 Fact</strong> 的难度；
+                精确多值用逗号分隔，命中任一即返回；<strong>难度区间</strong>为闭区间，
+                只填一边表示“≥ 下界”或“≤ 上界”，与精确值同时填写时取交集。
+                difficulty 为 <code>null</code> 的事实不会命中任何难度筛选。
+            </div>
+            <div id="searchResults"></div>
+        </div>
+
+        <h2>Facts 与 Links</h2>
+        <div class="card">
+            <div class="muted" style="font-size:13px;margin-bottom:10px;">
+                只读展示。一条 Fact 是一次可定位的观察；<code>role</code>（核心 / 辅助 / 不参与）
+                与 <code>effect</code>（正证 / 负证 / 仅边界）是写入时冻结的判断，<code>why</code>
+                是它的锚点。<code>difficulty</code> 为题目难度，尚未核定时显示 <code>null</code>。
+            </div>
+            <div id="facts">加载中…</div>
+        </div>
+    </div>
+
+    <script>
+        const ROLE_LABEL = { core: "核心", auxiliary: "辅助", out: "不参与" };
+        const EFFECT_LABEL = { positive: "正证", negative: "负证", boundary: "仅边界" };
+        const EFFECT_CLASS = { positive: "pos", negative: "neg", boundary: "bnd" };
+
+        // 协议 0.Protocol.md 的能力编号 → 中文名。显示名只作别名，编号才是稳定标识。
+        const SKILL_NAMES = {
+            A1: "数据结构", A2: "动态规划", A3: "图论", A4: "数学与组合", A5: "字符串",
+            B1: "读题与信息提取", B2: "观察与性质发现", B3: "建模", B4: "算法设计",
+            B5: "复杂度分析", B6: "正确性证明", B7: "反例构造", B8: "思维收敛",
+            C1: "暴力与部分分", C2: "实现", C3: "调试", C4: "边界意识",
+            C5: "独立性", C6: "陌生题迁移",
+        };
+
+        function skillLabel(skillId) {
+            const name = SKILL_NAMES[skillId];
+            return name ? `${skillId} · ${name}` : String(skillId == null ? "" : skillId);
+        }
+
+        function esc(value) {
+            return String(value == null ? "" : value)
+                .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        }
+
+        async function getJSON(url) {
+            const response = await fetch(url, { headers: { Accept: "application/json" } });
+            if (!response.ok) {
+                let detail = `HTTP ${response.status}`;
+                try {
+                    const body = await response.json();
+                    if (body && body.detail) detail = body.detail;
+                } catch (ignored) { /* 保留状态码 */ }
+                throw new Error(detail);
+            }
+            return response.json();
+        }
+
+        function renderStats(payload) {
+            const truncated = payload.has_more
+                ? `<div><strong>${payload.returned}</strong><br>本页显示</div>`
+                : "";
+            document.getElementById("stats").innerHTML = `
+                <div><strong>${payload.fact_count}</strong><br>Facts</div>
+                <div><strong>${payload.link_count}</strong><br>Links</div>
+                ${truncated}
+            `;
+        }
+
+        function renderTruncationNotice(payload) {
+            if (!payload.has_more) return "";
+            return `<div class="warn">账本共 ${payload.fact_count} 条 Fact，
+                本页只显示最新 ${payload.returned} 条（接口上限）。
+                请用 <code>limit</code> 参数分页查看更早的记录。</div>`;
+        }
+
+        function renderFacts(payload) {
+            const box = document.getElementById("facts");
+            if (!payload.items.length) {
+                box.innerHTML = '<div class="muted">账本为空。用 MCP 的 <code>ledger_add_fact</code> 与 <code>ledger_link</code> 写入。</div>';
+                return;
+            }
+            box.innerHTML = payload.items.map(fact => {
+                const links = fact.links.map(link => `
+                    <div class="link">
+                        <span class="pill ${esc(link.role)}">${ROLE_LABEL[link.role] || esc(link.role)}</span>
+                        <strong>${esc(skillLabel(link.skill_id))}</strong>
+                        <span class="${EFFECT_CLASS[link.effect] || ""}">${EFFECT_LABEL[link.effect] || esc(link.effect)}</span>
+                        <div class="muted">${esc(link.why)}</div>
+                    </div>`).join("") || '<div class="muted">（暂无 Link）</div>';
+                const replaced = fact.superseded
+                    ? `<span class="pill out">superseded${fact.replaced_by ? ` → ${esc(fact.replaced_by)}` : ""}</span>`
+                    : "";
+                return `<div class="fact${fact.superseded ? " superseded-fact" : ""}">
+                    <h3>${esc(fact.id)} <span class="muted">${esc(fact.pid)}</span> ${replaced}</h3>
+                    <div class="meta">
+                        ${esc(fact.date)} · ${esc(fact.phase)} · ${esc(fact.independence)}
+                        · difficulty ${fact.difficulty === null || fact.difficulty === undefined
+                            ? '<span class="muted">null</span>' : esc(fact.difficulty)}
+                        · ${esc(fact.result)}
+                        · <code>${esc(fact.source_ref)}</code>
+                    </div>
+                    <div class="note">${esc(fact.note)}</div>
+                    <div class="links">${links}</div>
+                </div>`;
+            }).join("");
+        }
+
+        function renderSkillOptions() {
+            const select = document.getElementById("fSkill");
+            select.innerHTML = '<option value="">（全部）</option>'
+                + Object.keys(SKILL_NAMES).map(id =>
+                    `<option value="${id}">${esc(skillLabel(id))}</option>`).join("");
+        }
+
+        function renderSearchHits(rows) {
+            const box = document.getElementById("searchResults");
+            if (!rows.length) {
+                box.innerHTML = '<div class="muted">没有命中。</div>';
+                return;
+            }
+            box.innerHTML = rows.map(row => `
+                <div class="hit">
+                    <div class="head">
+                        ${esc(row.fact_id)} · ${esc(row.skill_id)} ${esc(SKILL_NAMES[row.skill_id] || "")}
+                        <span class="pill ${esc(row.role)}">${ROLE_LABEL[row.role] || esc(row.role)}</span>
+                        <span class="${EFFECT_CLASS[row.effect] || ""}">${EFFECT_LABEL[row.effect] || esc(row.effect)}</span>
+                    </div>
+                    <div class="rows">
+                        ${esc(row.date)} · ${esc(row.phase)} · ${esc(row.independence)} ·
+                        difficulty ${row.difficulty === null || row.difficulty === undefined
+                            ? "null" : esc(row.difficulty)} ·
+                        ${esc(row.result)} · ${esc(row.pid)} · <code>${esc(row.source_ref)}</code>
+                        ${row.superseded ? ' · <span class="out">superseded</span>' : ""}
+                    </div>
+                    <div class="muted" style="font-size:12px;margin-top:4px;">${esc(row.why)}</div>
+                </div>`).join("");
+        }
+
+        async function runSearch() {
+            const status = document.getElementById("fStatus");
+            const skill = document.getElementById("fSkill").value;
+            if (!skill) {
+                status.textContent = "请先选择一个能力";
+                document.getElementById("searchResults").innerHTML = "";
+                return;
+            }
+            const params = new URLSearchParams({ skill_id: skill });
+            const role = document.getElementById("fRole").value;
+            const effect = document.getElementById("fEffect").value;
+            const difficulty = document.getElementById("fDifficulty").value.trim();
+            const difficultyMin = document.getElementById("fDifficultyMin").value.trim();
+            const difficultyMax = document.getElementById("fDifficultyMax").value.trim();
+            const limit = document.getElementById("fLimit").value.trim();
+            if (role) params.set("role", role);
+            if (effect) params.set("effect", effect);
+            if (difficulty) params.set("difficulty", difficulty);
+            if (difficultyMin) params.set("difficulty_min", difficultyMin);
+            if (difficultyMax) params.set("difficulty_max", difficultyMax);
+            if (limit) params.set("limit", limit);
+            status.textContent = "检索中…";
+            status.style.color = "#59636e";
+            try {
+                const rows = await getJSON(`/api/ledger/search?${params.toString()}`);
+                renderSearchHits(rows);
+                status.textContent = `命中 ${rows.length} 条`;
+            } catch (error) {
+                document.getElementById("searchResults").innerHTML = "";
+                status.textContent = `检索失败：${error.message}`;
+                status.style.color = "#cf222e";
+            }
+        }
+
+        function clearSearch() {
+            for (const id of ["fSkill", "fRole", "fEffect", "fDifficulty",
+                              "fDifficultyMin", "fDifficultyMax"]) {
+                document.getElementById(id).value = "";
+            }
+            document.getElementById("fLimit").value = "200";
+            document.getElementById("fStatus").textContent = "";
+            document.getElementById("searchResults").innerHTML = "";
+        }
+
+        async function load() {
+            try {
+                const payload = await getJSON("/api/ledger/facts");
+                document.getElementById("source").textContent =
+                    `facts: ${payload.facts_file}　links: ${payload.links_file}`
+                    + `　排序：${payload.order}`;
+                renderWarnings(payload);
+                renderStats(payload);
+                renderFacts(payload);
+            } catch (error) {
+                document.getElementById("source").textContent = `加载失败：${error.message}`;
+            }
+        }
+
+        function renderWarnings(payload) {
+            document.getElementById("warnings").innerHTML = renderTruncationNotice(payload);
+        }
+
+        renderSkillOptions();
+        document.getElementById("fRun").addEventListener("click", runSearch);
+        document.getElementById("fClear").addEventListener("click", clearSearch);
+        document.getElementById("fDifficulty").addEventListener("keydown", event => {
+            if (event.key === "Enter") runSearch();
+        });
+
+        load();
+    </script>
+</body>
+
+</html>

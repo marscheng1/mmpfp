@@ -6,5 +6,7 @@
   "ATCODER_ID": "",
   "RECORDS_FILE": "data/records.json",
   "SOLUTIONS_DIR": "data/solutions",
-  "SOLUTIONS_META_FILE": "data/solutions-meta.json"
+  "SOLUTIONS_META_FILE": "data/solutions-meta.json",
+  "LEDGER_FACTS_FILE": "data/facts.json",
+  "LEDGER_LINKS_FILE": "data/ledger-links.json"
 }

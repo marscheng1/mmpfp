@@ -9,14 +9,18 @@ from os import path
 from datetime import datetime
 from typing import Any, Callable, cast
 
-from fastapi import FastAPI, HTTPException, Request, Response
+from fastapi import FastAPI, HTTPException, Query, Request, Response
 from fastapi.responses import HTMLResponse
 
 from pydantic import BaseModel, Field
 
+from solution_mcp import create_solution_mcp
+from ledger import LedgerError, LedgerStore
+
 from config import (
-    ATCODER_ID, CF_ID, DATA_FILE, HDU_ID, LUOGU_ID, META_FILE, PAGE_DIR,
-    PROMPT_FILE, QOJ_ID, SOLUTIONS_DIR, day_id, day_len, month_id, month_len,
+    ATCODER_ID, CF_ID, DATA_FILE, HDU_ID, LEDGER_FACTS_FILE,
+    LEDGER_LINKS_FILE, LUOGU_ID, META_FILE, PAGE_DIR, PROMPT_FILE, QOJ_ID,
+    SOLUTIONS_DIR, day_id, day_len, month_id, month_len,
 )
 
 logger = logging.getLogger(__name__)
@@ -57,6 +61,19 @@ month_sum_cache = [0] * month_len
 pass_count = 0
 records_lock = threading.RLock()
 meta_lock = threading.RLock()
+ledger_lock = threading.RLock()
+
+#: 账本路径。默认取自 config.json，测试可以 monkeypatch 这两个名字。
+LEDGER_FACTS_FILE = LEDGER_FACTS_FILE
+LEDGER_LINKS_FILE = LEDGER_LINKS_FILE
+
+
+def make_ledger_store() -> LedgerStore:
+    """按当前（可被测试覆盖的）路径构造账本；构造本身不读盘。"""
+    return LedgerStore(
+        facts_file=LEDGER_FACTS_FILE,
+        links_file=LEDGER_LINKS_FILE,
+    )
 
 
 def load_count_cache():
@@ -115,8 +132,11 @@ async def lifespan(app: FastAPI):
         raise RuntimeError("records.json 包含无效记录") from exc
     with records_lock:
         load_count_cache()
-    yield
-    save_records_sync()
+    try:
+        async with solution_mcp.lifespan():
+            yield
+    finally:
+        save_records_sync()
 
 app = FastAPI(lifespan=lifespan)
 
@@ -523,5 +543,131 @@ def solutions_meta_delete(data: PathRequest):
                 if name != key and not name.startswith(key + "/")}
         _write_meta(meta)
     return {"ok": True}
+
+
+def get_submissions_snapshot(pid: str | None = None) -> list[dict[str, Any]]:
+    """按题号或读取全部缓存快照；与前端采集共用锁，避免读到并发更新的中间状态。"""
+    with records_lock:
+        return [record.copy() for record in records_cache if pid is None or record["pid"] == pid]
+
+
+# ===== 能力证据库（只读展示） =====
+def _split_csv(values: list[str] | None) -> list[str] | None:
+    """把「重复同名参数 + 逗号分隔」两种写法展平成值列表。
+
+    例：`?difficulty=1500,2500&difficulty=3000` → `["1500", "2500", "3000"]`。
+    空串与纯空白被丢弃；空结果按未筛选处理（返回 None）。
+    """
+    if not values:
+        return None
+    flattened: list[str] = []
+    for value in values:
+        flattened.extend(piece.strip() for piece in value.split(","))
+    kept = [piece for piece in flattened if piece]
+    return kept or None
+
+
+@app.get("/ledger", response_class=HTMLResponse)
+def ledger_page():
+    with open(path.join(PAGE_DIR, "ledger.html"), encoding="utf-8") as f:
+        return f.read()
+
+
+@app.get("/api/ledger/facts")
+def ledger_facts(limit: int = 2000):
+    """全部 Facts（含各自的 Links），供人工核查。被取代的 Fact 仍可读。
+
+    默认返回整个账本（上限 2000 条），**按最新优先**排序（date 降序，同日内 id 降序），
+    因此刚写入的事实一定出现在最前面。响应里的 `returned` / `has_more` 让调用方
+    能判断是否被截断——账本超过上限时应缩小查询而不是静默丢数据。
+    """
+    if not 1 <= limit <= 5000:
+        raise HTTPException(422, "limit 必须在 1–5000 之间")
+    store = make_ledger_store()
+    try:
+        facts = store.read_facts()
+        links = store.read_links()
+    except LedgerError as exc:
+        raise HTTPException(422, str(exc)) from exc
+    by_fact: dict[str, list[dict[str, Any]]] = {}
+    for link in links:
+        by_fact.setdefault(link.fact_id, []).append(link.model_dump())
+    # 一次算出取代关系，避免逐条回查（否则是 O(n²) 次读盘）。
+    replaced_by = {fact.supersedes: fact.id for fact in facts if fact.supersedes}
+    ordered = sorted(facts, key=lambda item: (item.date, item.id), reverse=True)
+    selected = ordered[:limit]
+    items = [
+        {
+            **fact.model_dump(),
+            "replaced_by": replaced_by.get(fact.id),
+            "links": by_fact.get(fact.id, []),
+        }
+        for fact in selected
+    ]
+    return {
+        "facts_file": store.facts_file,
+        "links_file": store.links_file,
+        "fact_count": len(facts),
+        "link_count": len(links),
+        "returned": len(items),
+        "has_more": len(ordered) > len(items),
+        "order": "date desc, id desc（最新优先）",
+        "items": items,
+    }
+
+
+@app.get("/api/ledger/search")
+def ledger_search(
+    skill_id: str,
+    role: str | None = None,
+    effect: str | None = None,
+    independence: list[str] | None = Query(
+        default=None,
+        description="独立性筛选，可多值：逗号分隔或重复同名参数"),
+    difficulty: list[str] | None = Query(
+        default=None,
+        description=("难度精确筛选，可多值：逗号分隔（`difficulty=1500,2500`）"
+                     "或重复同名参数。取所属 Fact 的 difficulty，命中任一即返回；"
+                     "difficulty 为 null 的 Fact 不会被命中。")),
+    difficulty_min: str | None = Query(
+        default=None,
+        description=("难度区间下界（含）。只给下界表示“≥ 下界”；"
+                     "与 difficulty_max 同时给出时必须 ≤ 它。")),
+    difficulty_max: str | None = Query(
+        default=None,
+        description=("难度区间上界（含）。只给上界表示“≤ 上界”；"
+                     "与 difficulty 同时给出时是“与”关系。")),
+    start_date: str | None = None,
+    end_date: str | None = None,
+    limit: int | None = None,
+):
+    """按能力反查 Link（连带所属 Fact），可按难度精确值/区间等条件筛选。
+
+    这里收 `list[str]` 而不是 `list[int]`：FastAPI 对 `list[int]` 会先做类型校验，
+    `difficulty=1500,2500` 这种逗号写法直接 422，而页面输入框本来就允许逗号多值。
+    收字符串后交给 `_normalise_difficulty_filter` / 枚举校验解析，于是**重复同名参数
+    与逗号分隔两种写法都能用**——这是改动前 `list[int]`（只支持重复参数）的超集。
+    区间两界也收字符串，同样交给 `_normalise_difficulty_bounds` 解析并校验。
+    """
+    store = make_ledger_store()
+    try:
+        return store.search(
+            skill_id=skill_id, role=role, effect=effect,
+            independence=_split_csv(independence),
+            difficulty=_split_csv(difficulty),
+            difficulty_min=difficulty_min, difficulty_max=difficulty_max,
+            start_date=start_date, end_date=end_date, limit=limit)
+    except LedgerError as exc:
+        raise HTTPException(422, str(exc)) from exc
+
+
+solution_mcp = create_solution_mcp(
+    app,
+    get_solutions_dir=lambda: SOLUTIONS_DIR,
+    resolve_path=safe_solutions_path,
+    read_report=solutions_read,
+    get_submissions=get_submissions_snapshot,
+    get_ledger_store=make_ledger_store,
+)
 
 

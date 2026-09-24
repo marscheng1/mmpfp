@@ -54,5 +54,13 @@ if not os.path.isabs(_solutions_dir):
 SOLUTIONS_DIR = os.path.abspath(os.path.expanduser(_solutions_dir))
 META_FILE = _configured_path(
     "SOLUTIONS_META_FILE", os.path.join(DATA_DIR, "solutions-meta.json"))
+
+# 能力证据库（Evidence Ledger）。两个平面文件即全部输入，落在 OI 侧；
+# 没有任何历史累计基线或历史 ID 登记表——未迁进账本的数据不参与判断。
+LEDGER_FACTS_FILE = _configured_path(
+    "LEDGER_FACTS_FILE", os.path.join(DATA_DIR, "facts.json"))
+LEDGER_LINKS_FILE = _configured_path(
+    "LEDGER_LINKS_FILE", os.path.join(DATA_DIR, "ledger-links.json"))
+
 PROMPT_FILE = os.path.join(DATA_DIR, "prompt", "every_problem.md")
 PAGE_DIR = os.path.join(PROJECT_ROOT, "page")

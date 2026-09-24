@@ -13,4 +13,8 @@ uv.lock
 config.json
 api-key.env
 
+# Test scratch directories（沙箱开发环境无法使用系统 TEMP）
+.pytest-run/
+.pytest_tmp/
+
 data/*.json
