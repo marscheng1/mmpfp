@@ -21,6 +21,15 @@ def meta_file(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     return target
 
 
+@pytest.mark.parametrize("user_id", ["41314", 41314, ""])
+def test_dmy_id_endpoint_returns_configured_user_id(user_id, monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setattr(main, "DMY_ID", user_id)
+    response = TestClient(main.app).get("/api/id/dmy")
+
+    assert response.status_code == 200
+    assert response.json() == user_id
+
+
 def test_solution_delete_rejects_empty_path():
     client = TestClient(main.app)
     response = client.post("/api/solutions/delete", json={})

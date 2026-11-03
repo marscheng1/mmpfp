@@ -18,9 +18,9 @@ from solution_mcp import create_solution_mcp
 from ledger import LedgerError, LedgerStore
 
 from config import (
-    ATCODER_ID, CF_ID, DATA_FILE, HDU_ID, LEDGER_FACTS_FILE,
-    LEDGER_LINKS_FILE, LUOGU_ID, META_FILE, PAGE_DIR, PROMPT_FILE, QOJ_ID,
-    SOLUTIONS_DIR, day_id, day_len, month_id, month_len,
+    ATCODER_ID, CF_ID, CSES_ID, DATA_FILE, DMY_ID, HDU_ID, LEDGER_FACTS_FILE,
+    LEDGER_LINKS_FILE, LOJ_ID, LUOGU_ID, META_FILE, PAGE_DIR, PROMPT_FILE, QOJ_ID,
+    SOLUTIONS_DIR, UOJ_ID, day_id, day_len, month_id, month_len,
 )
 
 logger = logging.getLogger(__name__)
@@ -201,6 +201,26 @@ def get_hdu_id():
 @app.get("/api/id/atcoder")
 def get_atcoder_id():
     return ATCODER_ID
+
+
+@app.get("/api/id/dmy")
+def get_dmy_id():
+    return DMY_ID
+
+
+@app.get("/api/id/uoj")
+def get_uoj_id():
+    return UOJ_ID
+
+
+@app.get("/api/id/loj")
+def get_loj_id():
+    return LOJ_ID
+
+
+@app.get("/api/id/cses")
+def get_cses_id():
+    return CSES_ID
 
 
 @app.get("/api/basic")

@@ -18,3 +18,8 @@ api-key.env
 .pytest_tmp/
 
 data/*.json
+
+# Desktop runtime / generated Windows shortcut
+logs/
+.desktop-storage/
+MMPFP.lnk

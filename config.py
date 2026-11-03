@@ -15,6 +15,10 @@ QOJ_ID = _config["QOJ_ID"]
 CF_ID = _config["CF_ID"]
 HDU_ID = _config["HDU_ID"]
 ATCODER_ID = _config["ATCODER_ID"]
+DMY_ID = _config.get("DMY_ID", "")
+UOJ_ID = _config.get("UOJ_ID", "")
+LOJ_ID = _config.get("LOJ_ID", "")
+CSES_ID = _config.get("CSES_ID", "")
 
 day_start = datetime(2000, 1,  1)
 

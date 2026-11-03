@@ -933,6 +933,61 @@
             let suppressEditorChange = false;
             let commitInProgress = false;
             let fileWriteQueue = Promise.resolve();
+            let desktopExitState = null;
+            let desktopExitGeneration = 0;
+
+            // Only the desktop shell invokes these hooks; browser behavior is unchanged.
+            window.mmpfpCancelExit = function () {
+                desktopExitGeneration++;
+                if (!desktopExitState) return;
+                document.body.inert = desktopExitState.inert;
+                if (cmEditor) cmEditor.setOption('readOnly', desktopExitState.readOnly);
+                if (desktopExitState.timerRunning && !isCompleted) startTimer();
+                desktopExitState = null;
+            };
+
+            window.mmpfpPrepareExit = async function () {
+                if (desktopExitState) return { ok: false, error: '正在保存，请稍后再退出。' };
+                const generation = ++desktopExitGeneration;
+                desktopExitState = {
+                    inert: document.body.inert,
+                    readOnly: cmEditor ? cmEditor.getOption('readOnly') : false,
+                    timerRunning: Boolean(timerInterval),
+                };
+                document.body.inert = true;
+                if (cmEditor) cmEditor.setOption('readOnly', true);
+                if (saveTimer) clearTimeout(saveTimer);
+                stopTimer();
+
+                try {
+                    await fileWriteQueue;
+                    // A queued segment must finish updating committedContent first.
+                    while (commitInProgress) await new Promise(resolve => setTimeout(resolve, 20));
+                    if (generation !== desktopExitGeneration) return { ok: false, error: '退出已取消。' };
+                    if (currentFilePath && cmEditor) {
+                        // Always take a fresh snapshot: a previous write may have cleared dirty.
+                        const filePath = currentFilePath;
+                        const content = committedContent + cmEditor.getValue();
+                        await enqueueFileWrite(() => apiPost('/api/solutions/save', {
+                            path: filePath, content,
+                        }));
+                        if (generation !== desktopExitGeneration) return { ok: false, error: '退出已取消。' };
+                        dirty = false;
+                        saveStatus.textContent = '已保存';
+                        saveStatus.className = 'save-status saved';
+                        const key = normalizeMetaPath(filePath);
+                        const meta = { elapsed: timerTick, completed: isCompleted };
+                        // The regular timer silently ignores errors; exit must verify persistence.
+                        await apiPost('/api/solutions/meta', { path: key, ...meta });
+                        if (generation !== desktopExitGeneration) return { ok: false, error: '退出已取消。' };
+                        metaData[key] = meta;
+                    }
+                    return { ok: true };
+                } catch (error) {
+                    if (generation === desktopExitGeneration) window.mmpfpCancelExit();
+                    return { ok: false, error: '退出前保存失败：' + error.message };
+                }
+            };
 
             // ---------- API 辅助 ----------
             async function apiGet(url) {

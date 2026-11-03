@@ -2,7 +2,19 @@
 
 ## 项目说明
 
-刷题记录追踪应用，支持多 OJ 平台（Luogu、QOJ、Codeforces、HDU、AtCoder）的刷题记录统计，并提供本地解题日志编辑器。
+刷题记录追踪应用，支持多 OJ 平台（Luogu、QOJ、UOJ、LOJ、Codeforces、CSES、HDU、AtCoder、MXOJ、HFOJ、代码源）的刷题记录统计，并提供本地解题日志编辑器。
+
+浏览器采集脚本为 `webview-script.js`。HFOJ 支持 `hfoj.net/record` 和任意多层路径下的 `/record` 列表页（可带查询参数），点击页面上的“读取记录”按钮才会采集当前页；与 HDU 一样不自动采集或翻页，请先在网站上筛选自己的提交。HFOJ 题号保留题库路径，例如 `Hfoj_d_ou_training_centre_S44M7T3`，根题库使用 `Hfoj题号`；提交号使用 `Hfoj` 前缀。脚本中的 `debug = true` 只打印结果，设置为 `false` 才会上传到本地服务。
+
+代码源新 OJ（`newoj.daimayuan.top/record`，可带查询参数）在页面加载后自动采集并上传当前页中匹配 `config.json` 的 `DMY_ID` 的提交。填写数字用户 ID，例如 `"DMY_ID": "41314"`，修改配置后需重启服务；脚本通过 `/api/id/dmy` 获取配置，按每行递交者链接中的 ID 匹配。未配置、ID 无效或当前页无匹配时不上传，不自动翻页。题号从题目链接读取并添加 `Dmy` 前缀，例如 `/p/5810` 保存为 `Dmy5810`，提交号也添加 `Dmy` 前缀；通过状态按 `st-pass` 判断，提交时间使用页面中的 Unix 时间戳。脚本默认 `debug = false`，可改为 `true` 仅打印采集结果。
+
+UOJ 支持 `uoj.ac/submissions`（可带查询参数），通过 `/api/id/uoj` 获取 `config.json` 中的 `UOJ_ID` 用户名，例如 `"UOJ_ID": "marscheng"`，自动采集当前页中用户名匹配的提交，不自动翻页。未配置用户名或当前页无匹配时不上传。结果为 100 分记为通过，题号和提交号使用 `Uoj` 前缀，例如 `Uoj455`、`Uoj880803`。修改配置后需重启服务，并更新浏览器用户脚本；`debug = true` 时只打印结果，实际上传需设为 `false`。
+
+LOJ 支持 `loj.ac/s`（可带查询参数），通过 `/api/id/loj` 获取 `config.json` 中的 `LOJ_ID` 用户名，例如 `"LOJ_ID": "marscheng"`。自动采集当前页中用户名匹配的提交，并在页面动态加载、手动筛选或翻页后重新采集；不自动翻页，同一提交内容未变化时不重复发送，等待评测的记录会等结果更新后再采集。通过状态为 `Accepted`，时间取完整日期的 `title` 属性，题号和提交号使用 `Loj` 前缀，例如 `Loj6500`、`Loj2634922`。修改配置后需重启服务，并更新浏览器用户脚本；`debug = true` 时只打印结果，实际上传需设为 `false`。
+
+Codeforces 同时支持普通比赛与 Gym 的 `status`、`my` 页面（可带查询参数），沿用 `CF_ID` 配置匹配用户名。Gym 题号和提交号继续使用 `Cf` 前缀，例如 `Cf104053D`、`Cf396259403`；即使源码链接为 `#` 或隐藏，也能读取提交记录，只采集当前页。
+
+CSES 支持 `cses.fi/problemset/result/<提交号>/`（可带查询参数）。在 `config.json` 中填写 `CSES_ID` 用户名，例如 `"CSES_ID": "marscheng"`，通过 `/api/id/cses` 获取配置，只采集提交详情中 Sender 匹配的记录。只读取当前结果页的总评结果，`ACCEPTED` 记为通过，未完成评测时等待状态更新；时间按页面明确给出的 UTC 偏移（如 `+0200`）转换。题号和提交号使用 `Cses` 前缀，例如 `Cses2088`、`Cses19262823`。修改配置后需重启服务并更新用户脚本；`debug = true` 时只打印结果，实际上传需设为 `false`。
 
 ## 快速开始
 
@@ -35,6 +47,25 @@ uv run uvicorn main:app --host 127.0.0.1 --workers 1
 这样，mmpfp 中的 `data/solutions/<path>.md` 仍是默认目录约定，但 API 实际会读写 OI 仓库中的 `article/solutions/<path>.md`。题解文件由 OI 仓库管理，不会进入 mmpfp 的提交；请确保 `data/solutions/.gitignore` 继续忽略本地默认目录，并在 OI 仓库中提交 API 产生的修改。未配置这些字段时，会使用 `data/records.json`、`data/solutions` 和 `data/solutions-meta.json`。
 
 `LEDGER_FACTS_FILE` 与 `LEDGER_LINKS_FILE` 配置能力证据库的两个平面文件（与 `data/prompt/` 同级，按“代码在 mmpfp，数据在 OI”的约定落在 OI 侧）。详见下节的「能力证据库」。
+
+## Windows 桌面入口
+
+桌面模式沿用当前配置和 uv 虚拟环境，使用 WebView2 显示原网页，并在后台运行同一个本地服务。首次使用在项目目录执行：
+
+```powershell
+uv sync --extra desktop
+powershell -NoProfile -ExecutionPolicy Bypass -File .\create-desktop-shortcut.ps1
+```
+
+双击项目目录中的 `MMPFP.lnk` 后只启动后台服务和系统托盘，不弹出主窗口或命令行；也可以将快捷方式复制到桌面。快捷方式通过 Windows 的 `wscript.exe` 运行 `launch-desktop.vbs`，以隐藏方式调用 `.venv\Scripts\pythonw.exe desktop.py`，避免 uv 的控制台启动器弹出窗口。重新生成已有快捷方式时为脚本加上 `-Force`；旧的桌面快捷方式需重新复制。开发调试可使用 `uv run --extra desktop python desktop.py`。
+
+点击系统托盘图标或菜单中的“打开窗口”显示主界面。窗口关闭按钮只会隐藏窗口，服务仍运行，浏览器采集脚本和 `http://127.0.0.1:8000/mcp` 仍然可用。重复双击快捷方式不会创建第二个实例，也不会弹出主界面。托盘“退出”会先保存解题日志的当前编辑内容和计时，再停止服务并释放端口；保存失败会取消退出并显示错误。退出后采集脚本和 MCP 不再可用。
+
+桌面模式仍仅监听 `127.0.0.1:8000`。首次启动前请关闭原控制台服务；端口被其他程序占用时会提示冲突，不会接管或结束该程序。原 `uv run uvicorn main:app --host 127.0.0.1 --workers 1` 启动方式仍可单独使用。
+
+需要 Microsoft Edge WebView2 Runtime，缺失时请安装该运行环境。日志位于 `logs/desktop.log`，浏览器主题等状态位于 `.desktop-storage/`，这些运行文件不进入 Git。桌面浏览器存储与 Chrome/Edge 的独立浏览器配置不共用。当前版本不打包独立 exe、不设置开机自启；图表和编辑器仍使用原有 CDN 资源，需要联网加载。
+
+常规测试为 `uv run --no-sync python -m pytest`。安装桌面依赖后，可用 `uv run --no-sync python -m pytest tests/desktop_smoke.py -s` 运行真实窗口/托盘验证；该验证只使用临时数据和随机端口，不改动实际刷题记录，不会在常规测试中自动打开窗口。
 
 ## 安全边界
 
